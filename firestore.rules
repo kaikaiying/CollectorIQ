@@ -1,0 +1,16 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Anonymous readings: any signed-in user can add; no one reads raw readings in the app
+    match /readings/{id} {
+      allow create: if request.auth != null;
+      allow read, update, delete: if false;
+    }
+    // Aggregates: updated by app when a reading is added; everyone can read (Discovery)
+    match /aggregates/{reference} {
+      allow read: if true;
+      allow create, update: if request.auth != null;
+      allow delete: if false;
+    }
+  }
+}

@@ -2,8 +2,8 @@ import { Link, useNavigate } from 'react-router-dom'
 
 const Section = ({ title, children }) => (
   <section style={{ marginBottom: '1.5rem' }}>
-    <h2 style={{ fontSize: '1.1rem', fontWeight: 600, marginBottom: '0.5rem', color: '#e8e8e8' }}>{title}</h2>
-    <div style={{ fontSize: '0.9rem', color: '#aaa', lineHeight: 1.6 }}>{children}</div>
+    <h2 style={{ fontSize: '1.1rem', fontWeight: 600, marginBottom: '0.5rem', color: 'var(--text)' }}>{title}</h2>
+    <div style={{ fontSize: 15, color: 'var(--text-secondary)', lineHeight: 1.6 }}>{children}</div>
   </section>
 )
 
@@ -23,12 +23,12 @@ export default function PrivacyPolicy() {
       <button
         type="button"
         onClick={() => navigate(-1)}
-        style={{ fontSize: '0.9rem', color: '#ffd43b', marginBottom: '1rem', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+        style={{ fontSize: 15, color: 'var(--accent)', marginBottom: '1rem', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
       >
         ← Back
       </button>
       <h1 style={{ fontSize: '1.5rem', fontWeight: 600, marginBottom: '0.25rem' }}>Privacy Policy</h1>
-      <p style={{ fontSize: '0.85rem', color: '#888', marginBottom: '1.5rem' }}>Effective Date: June 24, 2025</p>
+      <p style={{ fontSize: 15, color: 'var(--text-secondary)', marginBottom: '1.5rem' }}>Effective Date: June 24, 2025</p>
 
       <P>
         CollectorIQ ("we," "our," "us") is committed to protecting your privacy. This Privacy Policy outlines how your personal information is collected, used, and disclosed when you use our app across all jurisdictions including Canada, the United States, the European Union, and any other applicable regions. CollectorIQ is designed to help watch enthusiasts track and analyze the performance of their watches. By signing up and using the app, you agree to all terms of this Privacy Policy, including the collection, use, and processing of your data as described herein. This document also serves as our Terms of Service, governing your use of CollectorIQ.
@@ -112,7 +112,7 @@ export default function PrivacyPolicy() {
         <P>We may send you marketing emails or notifications about new features and offers. You can opt out of these communications at any time by following the unsubscribe instructions included in the messages or by contacting us.</P>
       </Section>
 
-      <h2 style={{ fontSize: '1.25rem', fontWeight: 600, marginTop: '1.5rem', marginBottom: '0.75rem', color: '#e8e8e8' }}>Terms of Service</h2>
+      <h2 style={{ fontSize: '1.25rem', fontWeight: 600, marginTop: '1.5rem', marginBottom: '0.75rem', color: 'var(--text)' }}>Terms of Service</h2>
 
       <Section title="User Responsibilities">
         <P>Users agree to use CollectorIQ only for lawful purposes and not misuse the service.</P>

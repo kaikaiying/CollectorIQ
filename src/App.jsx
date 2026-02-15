@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, useLocation, Link } from 'react-router-dom'
+import { AuthProvider, useAuth } from './contexts/AuthContext'
 import Login from './pages/Login'
 import Collection from './pages/Collection'
 import DriftTest from './pages/DriftTest'
@@ -10,7 +10,6 @@ import AddWatch from './pages/AddWatch'
 import PrivacyPolicy from './pages/PrivacyPolicy'
 
 const COLLECTION_KEY = 'collectoriq_collection'
-const USER_KEY = 'collectoriq_user'
 
 export function getCollection() {
   try {
@@ -25,34 +24,22 @@ export function setCollection(watches) {
   localStorage.setItem(COLLECTION_KEY, JSON.stringify(watches))
 }
 
-export function getUser() {
-  return localStorage.getItem(USER_KEY)
-}
-
-export function setUser(name) {
-  if (name) localStorage.setItem(USER_KEY, name)
-  else localStorage.removeItem(USER_KEY)
-}
-
 function AppContent() {
-  const [user, setUserState] = useState(getUser())
+  const { user, loading } = useAuth()
   const location = useLocation()
   const isLogin = location.pathname === '/login'
   const isAddWatch = location.pathname === '/add-watch'
   const isPrivacy = location.pathname === '/privacy'
 
-  useEffect(() => {
-    setUserState(getUser())
-  }, [location.pathname])
-
-  const handleLogin = (name) => {
-    setUser(name)
-    setUserState(name)
-  }
-
-  const handleLogout = () => {
-    setUser(null)
-    setUserState(null)
+  if (loading) {
+    return (
+      <div className="app-layout" style={{ alignItems: 'center', justifyContent: 'center', padding: '2rem' }}>
+        <div className="login-logo-wrap" style={{ width: 80, height: 80, marginBottom: '1rem' }}>
+        <img src="/logo.png" alt="" className="login-logo" />
+      </div>
+        <p style={{ color: 'var(--text-secondary)', fontSize: 15 }}>Loading…</p>
+      </div>
+    )
   }
 
   if (!user && !isLogin && !isPrivacy) {
@@ -63,14 +50,14 @@ function AppContent() {
     <div className="app-layout">
       <main className="app-main">
         <Routes>
-          <Route path="/login" element={<Login onLogin={handleLogin} />} />
+          <Route path="/login" element={<Login />} />
           <Route path="/privacy" element={<PrivacyPolicy />} />
           <Route path="/" element={<Collection />} />
           <Route path="/add-watch" element={<AddWatch />} />
           <Route path="/watch/:reference" element={<WatchDetail />} />
           <Route path="/drift-test" element={<DriftTest />} />
           <Route path="/discovery" element={<Discovery />} />
-          <Route path="/settings" element={<Settings onLogout={handleLogout} />} />
+          <Route path="/settings" element={<Settings />} />
         </Routes>
       </main>
 
@@ -89,7 +76,9 @@ function AppContent() {
 export default function App() {
   return (
     <BrowserRouter>
-      <AppContent />
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
     </BrowserRouter>
   )
 }

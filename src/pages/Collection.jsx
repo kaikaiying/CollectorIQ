@@ -21,7 +21,7 @@ export default function Collection() {
 
       {watches.length === 0 ? (
         <div className="card">
-          <p style={{ color: '#888', marginBottom: '1rem' }}>No watches yet. Add your first timepiece.</p>
+          <p style={{ color: 'var(--text-secondary)', marginBottom: '1rem' }}>No watches yet. Add your first timepiece.</p>
           <Link to="/add-watch" className="btn">Add watch</Link>
         </div>
       ) : (
@@ -31,7 +31,7 @@ export default function Collection() {
               <li key={w.reference} className="card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <Link to={`/watch/${encodeURIComponent(w.reference)}`} style={{ color: 'inherit', textDecoration: 'none', flex: 1 }}>
                   <strong>{w.model}</strong>
-                  <div style={{ fontSize: '0.9rem', color: '#888' }}>{w.brand} · Ref: {w.reference}</div>
+                  <div style={{ fontSize: 15, color: 'var(--text-secondary)' }}>{w.brand} · Ref: {w.reference}</div>
                 </Link>
                 <button
                   type="button"

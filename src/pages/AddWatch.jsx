@@ -1,6 +1,12 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getCollection, setCollection } from '../App'
+import {
+  MOVEMENT_TYPES,
+  CATEGORIES,
+  validateCustomWatch,
+  generateCustomReference,
+} from '../lib/watchSpecSchema'
 
 function parseSpec(s) {
   if (!s || typeof s !== 'string') return null
@@ -9,6 +15,7 @@ function parseSpec(s) {
 }
 
 export default function AddWatch() {
+  const [mode, setMode] = useState('catalog') // 'catalog' | 'custom'
   const [specs, setSpecs] = useState([])
   const [brand, setBrand] = useState('')
   const [model, setModel] = useState('')
@@ -16,9 +23,22 @@ export default function AddWatch() {
   const [loading, setLoading] = useState(true)
   const navigate = useNavigate()
 
+  // Custom form state
+  const [customBrand, setCustomBrand] = useState('')
+  const [customModel, setCustomModel] = useState('')
+  const [customReference, setCustomReference] = useState('')
+  const [specLow, setSpecLow] = useState('')
+  const [specHigh, setSpecHigh] = useState('')
+  const [movementType, setMovementType] = useState('')
+  const [movementCalibre, setMovementCalibre] = useState('')
+  const [category, setCategory] = useState('')
+  const [notes, setNotes] = useState('')
+  const [customErrors, setCustomErrors] = useState({})
+
   useEffect(() => {
     fetch('/watchspecs.json')
-      .then((r) => r.ok ? r.json() : [])
+      .then((r) => (r.ok ? r.json() : []))
+      .catch(() => [])
       .then((data) => {
         setSpecs(Array.isArray(data) ? data : [])
         if (data?.length && !brand) {
@@ -27,26 +47,22 @@ export default function AddWatch() {
         }
         setLoading(false)
       })
-      .catch(() => setLoading(false))
   }, [])
 
   const brands = [...new Set(specs.map((w) => w.brand))].sort()
   const models = brand ? [...new Set(specs.filter((w) => w.brand === brand).map((w) => w.model))].sort() : []
-  const refs = brand && model
-    ? specs.filter((w) => w.brand === brand && w.model === model)
-    : []
-
+  const refs = brand && model ? specs.filter((w) => w.brand === brand && w.model === model) : []
   const currentSpec = refs.find((r) => r.reference === reference) || refs[0]
 
-  const handleAdd = () => {
+  const handleAddFromCatalog = () => {
     if (!currentSpec) return
-    const collection = getCollection()
-    if (collection.some((w) => w.reference === currentSpec.reference)) {
+    const col = getCollection()
+    if (col.some((w) => w.reference === currentSpec.reference)) {
       navigate('/')
       return
     }
     setCollection([
-      ...collection,
+      ...col,
       {
         brand: currentSpec.brand,
         model: currentSpec.model,
@@ -58,70 +74,251 @@ export default function AddWatch() {
     navigate('/')
   }
 
-  if (loading) {
-    return <p className="page-title">Loading watches…</p>
+  const handleAddCustom = () => {
+    setCustomErrors({})
+    const { valid, errors, sanitized } = validateCustomWatch({
+      brand: customBrand,
+      model: customModel,
+      reference: customReference,
+      specLow: specLow === '' ? NaN : parseFloat(specLow),
+      specHigh: specHigh === '' ? NaN : parseFloat(specHigh),
+      movementType: movementType || undefined,
+      movementCalibre: movementCalibre || undefined,
+      category: category || undefined,
+      notes: notes || undefined,
+    })
+    if (!valid) {
+      setCustomErrors(errors)
+      return
+    }
+    const col = getCollection()
+    const ref = sanitized.reference || generateCustomReference(sanitized.brand, sanitized.model)
+    if (col.some((w) => w.reference === ref)) {
+      setCustomErrors({ reference: 'This watch is already in your collection.' })
+      return
+    }
+    setCollection([
+      ...col,
+      {
+        brand: sanitized.brand,
+        model: sanitized.model,
+        reference: ref,
+        specMin: sanitized.specMin,
+        specMax: sanitized.specMax,
+        movementType: sanitized.movementType,
+        movementCalibre: sanitized.movementCalibre,
+        category: sanitized.category,
+        notes: sanitized.notes,
+        isCustom: true,
+      },
+    ])
+    navigate('/')
   }
 
-  if (specs.length === 0) {
-    return (
-      <div className="card">
-        <p>Watch database could not be loaded. Add <code>watchspecs.json</code> to the <code>public</code> folder.</p>
-        <button type="button" className="btn" onClick={() => navigate('/')}>Back to collection</button>
-      </div>
-    )
+  if (loading && mode === 'catalog') {
+    return <p className="page-title">Loading…</p>
   }
 
   return (
     <>
       <h1 className="page-title">Add watch</h1>
+      <p style={{ color: 'var(--text-secondary)', marginBottom: 'var(--space-lg)' }}>
+        From the catalog or add your own with manufacturer accuracy spec.
+      </p>
 
-      <div className="card">
-        <label className="label">Brand</label>
-        <select
-          className="select"
-          value={brand}
-          onChange={(e) => { setBrand(e.target.value); setModel(''); setReference(''); }}
+      <div style={{ display: 'flex', gap: '0.5rem', marginBottom: 'var(--space-lg)' }}>
+        <button
+          type="button"
+          className={mode === 'catalog' ? 'btn' : 'btn btn-secondary'}
+          style={{ flex: 1 }}
+          onClick={() => setMode('catalog')}
         >
-          {brands.map((b) => (
-            <option key={b} value={b}>{b}</option>
-          ))}
-        </select>
+          From catalog
+        </button>
+        <button
+          type="button"
+          className={mode === 'custom' ? 'btn' : 'btn btn-secondary'}
+          style={{ flex: 1 }}
+          onClick={() => setMode('custom')}
+        >
+          Add custom
+        </button>
       </div>
 
-      <div className="card">
-        <label className="label">Model</label>
-        <select
-          className="select"
-          value={model}
-          onChange={(e) => { setModel(e.target.value); setReference(''); }}
-        >
-          {models.map((m) => (
-            <option key={m} value={m}>{m}</option>
-          ))}
-        </select>
-      </div>
+      {mode === 'catalog' && (
+        <>
+          {specs.length === 0 ? (
+            <div className="card">
+              <p>Catalog not loaded. Add custom instead, or add <code>watchspecs.json</code> to <code>public</code>.</p>
+              <button type="button" className="btn" onClick={() => navigate('/')}>Back</button>
+            </div>
+          ) : (
+            <>
+              <div className="card" style={{ marginBottom: 'var(--space)' }}>
+                <label className="label">Brand</label>
+                <select
+                  className="select"
+                  value={brand}
+                  onChange={(e) => { setBrand(e.target.value); setModel(''); setReference(''); }}
+                  style={{ marginBottom: 'var(--space)' }}
+                >
+                  {brands.map((b) => (
+                    <option key={b} value={b}>{b}</option>
+                  ))}
+                </select>
+                <label className="label">Model</label>
+                <select
+                  className="select"
+                  value={model}
+                  onChange={(e) => { setModel(e.target.value); setReference(''); }}
+                  style={{ marginBottom: 'var(--space)' }}
+                >
+                  {models.map((m) => (
+                    <option key={m} value={m}>{m}</option>
+                  ))}
+                </select>
+                <label className="label">Reference</label>
+                <select
+                  className="select"
+                  value={reference}
+                  onChange={(e) => setReference(e.target.value)}
+                >
+                  {refs.map((r) => (
+                    <option key={r.reference} value={r.reference}>{r.reference}</option>
+                  ))}
+                </select>
+                {currentSpec && (
+                  <p style={{ fontSize: 15, color: 'var(--text-secondary)', marginTop: '0.5rem' }}>
+                    Spec: {currentSpec.spec_low} to {currentSpec.spec_high}
+                  </p>
+                )}
+              </div>
+              <button type="button" className="btn" style={{ width: '100%' }} onClick={handleAddFromCatalog} disabled={!currentSpec}>
+                Add to collection
+              </button>
+            </>
+          )}
+        </>
+      )}
 
-      <div className="card">
-        <label className="label">Reference</label>
-        <select
-          className="select"
-          value={reference}
-          onChange={(e) => setReference(e.target.value)}
-        >
-          {refs.map((r) => (
-            <option key={r.reference} value={r.reference}>{r.reference}</option>
-          ))}
-        </select>
-        {currentSpec && (
-          <p style={{ fontSize: '0.85rem', color: '#888', marginTop: '0.5rem' }}>
-            Spec: {currentSpec.spec_low} to {currentSpec.spec_high}
-          </p>
-        )}
-      </div>
+      {mode === 'custom' && (
+        <>
+          <div className="card" style={{ marginBottom: 'var(--space)' }}>
+            <p style={{ fontSize: 13, color: 'var(--text-tertiary)', marginBottom: 'var(--space)' }}>
+              Use the manufacturer’s stated accuracy (e.g. “-2 to +2 s/day”). This is what we compare your drift tests against.
+            </p>
 
-      <button type="button" className="btn" style={{ width: '100%' }} onClick={handleAdd} disabled={!currentSpec}>
-        Add to collection
-      </button>
+            <label className="label">Brand *</label>
+            <input
+              type="text"
+              className="input"
+              value={customBrand}
+              onChange={(e) => setCustomBrand(e.target.value)}
+              placeholder="e.g. Rolex, Omega"
+              style={{ marginBottom: '0.5rem' }}
+            />
+            {customErrors.brand && <p className="error-message" style={{ marginTop: -4 }}>{customErrors.brand}</p>}
+
+            <label className="label" style={{ marginTop: 'var(--space)' }}>Model *</label>
+            <input
+              type="text"
+              className="input"
+              value={customModel}
+              onChange={(e) => setCustomModel(e.target.value)}
+              placeholder="e.g. Submariner Date, Speedmaster"
+              style={{ marginBottom: '0.5rem' }}
+            />
+            {customErrors.model && <p className="error-message" style={{ marginTop: -4 }}>{customErrors.model}</p>}
+
+            <label className="label" style={{ marginTop: 'var(--space)' }}>Reference (optional)</label>
+            <input
+              type="text"
+              className="input"
+              value={customReference}
+              onChange={(e) => setCustomReference(e.target.value)}
+              placeholder="e.g. 126610LN"
+              style={{ marginBottom: '0.5rem' }}
+            />
+            {customErrors.reference && <p className="error-message" style={{ marginTop: -4 }}>{customErrors.reference}</p>}
+
+            <label className="label" style={{ marginTop: 'var(--space)' }}>Manufacturer accuracy (s/day) *</label>
+            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+              <input
+                type="text"
+                className="input"
+                value={specLow}
+                onChange={(e) => setSpecLow(e.target.value)}
+                placeholder="-2"
+                style={{ width: 80 }}
+              />
+              <span style={{ color: 'var(--text-tertiary)' }}>to</span>
+              <input
+                type="text"
+                className="input"
+                value={specHigh}
+                onChange={(e) => setSpecHigh(e.target.value)}
+                placeholder="+2"
+                style={{ width: 80 }}
+              />
+              <span style={{ color: 'var(--text-tertiary)', fontSize: 13 }}>s/day</span>
+            </div>
+            {(customErrors.specLow || customErrors.specHigh) && (
+              <p className="error-message" style={{ marginTop: 4 }}>{customErrors.specLow || customErrors.specHigh}</p>
+            )}
+
+            <label className="label" style={{ marginTop: 'var(--space)' }}>Movement type</label>
+            <select
+              className="select"
+              value={movementType}
+              onChange={(e) => setMovementType(e.target.value)}
+              style={{ marginBottom: '0.5rem' }}
+            >
+              <option value="">—</option>
+              {MOVEMENT_TYPES.map((t) => (
+                <option key={t} value={t}>{t}</option>
+              ))}
+            </select>
+
+            <label className="label">Movement calibre (optional)</label>
+            <input
+              type="text"
+              className="input"
+              value={movementCalibre}
+              onChange={(e) => setMovementCalibre(e.target.value)}
+              placeholder="e.g. 3235, 3861"
+              style={{ marginBottom: '0.5rem' }}
+            />
+
+            <label className="label" style={{ marginTop: 'var(--space)' }}>Category</label>
+            <select
+              className="select"
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              style={{ marginBottom: '0.5rem' }}
+            >
+              <option value="">—</option>
+              {CATEGORIES.map((c) => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
+
+            <label className="label">Notes (optional)</label>
+            <input
+              type="text"
+              className="input"
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="e.g. year, variant"
+              maxLength={200}
+            />
+          </div>
+
+          <button type="button" className="btn" style={{ width: '100%' }} onClick={handleAddCustom}>
+            Add to collection
+          </button>
+        </>
+      )}
+
       <button type="button" className="btn btn-secondary" style={{ width: '100%', marginTop: '0.5rem' }} onClick={() => navigate('/')}>
         Cancel
       </button>

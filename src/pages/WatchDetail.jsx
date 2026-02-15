@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { getCollection } from '../App'
 import { getDriftReadings } from '../lib/driftStorage'
+import { getOfficialServiceUrl } from '../lib/serviceCenters'
 
 export default function WatchDetail() {
   const { reference } = useParams()
@@ -32,16 +33,48 @@ export default function WatchDetail() {
   const sorted = [...readings].sort((a, b) => b.timestamp - a.timestamp)
   const recentOut = sorted.slice(0, 3).filter((r) => r.driftInSeconds < min || r.driftInSeconds > max).length
   const suggestService = readings.length >= 2 && recentOut >= 2
+  const serviceUrl = getOfficialServiceUrl(watch.brand)
 
   return (
     <>
       <h1 className="page-title">{watch.model}</h1>
-      <p style={{ color: '#888', marginTop: '-0.5rem', marginBottom: '1rem' }}>{watch.brand} · Ref: {watch.reference}</p>
+      <p style={{ color: 'var(--text-secondary)', marginTop: '-0.5rem', marginBottom: '1rem' }}>
+        {watch.brand} · Ref: {watch.reference}
+        {watch.isCustom && <span style={{ marginLeft: 6, fontSize: 12, color: 'var(--text-tertiary)' }}>(custom)</span>}
+      </p>
+
+      {(watch.movementType || watch.movementCalibre || watch.category || watch.notes) && (
+        <div className="card" style={{ marginBottom: '1rem' }}>
+          <h3 style={{ marginTop: 0 }}>Details</h3>
+          <dl style={{ margin: 0, display: 'grid', gap: '0.35rem 1rem', gridTemplateColumns: 'auto 1fr' }}>
+            {(watch.movementType || watch.movementCalibre) && (
+              <>
+                <dt style={{ color: 'var(--text-secondary)', margin: 0 }}>Movement</dt>
+                <dd style={{ margin: 0 }}>
+                  {[watch.movementType, watch.movementCalibre].filter(Boolean).join(' · ')}
+                </dd>
+              </>
+            )}
+            {watch.category && (
+              <>
+                <dt style={{ color: 'var(--text-secondary)', margin: 0 }}>Category</dt>
+                <dd style={{ margin: 0 }}>{watch.category}</dd>
+              </>
+            )}
+            {watch.notes && (
+              <>
+                <dt style={{ color: 'var(--text-secondary)', margin: 0 }}>Notes</dt>
+                <dd style={{ margin: 0 }}>{watch.notes}</dd>
+              </>
+            )}
+          </dl>
+        </div>
+      )}
 
       {suggestService && (
         <div className="card" style={{ borderLeft: '4px solid #f59e0b', marginBottom: '1rem' }}>
           <strong style={{ color: '#f59e0b' }}>Consider service</strong>
-          <p style={{ margin: '0.35rem 0 0', fontSize: '0.9rem', color: '#aaa' }}>
+          <p style={{ margin: '0.35rem 0 0', fontSize: 15, color: 'var(--text-secondary)' }}>
             Your watch is often outside the manufacturer’s spec. A service may help.
           </p>
         </div>
@@ -49,7 +82,7 @@ export default function WatchDetail() {
 
       <div className="card">
         <h3 style={{ marginTop: 0 }}>Spec compliance</h3>
-        <p style={{ fontSize: '0.9rem', color: '#888' }}>Manufacturer range: {min} to +{max} s/day</p>
+        <p style={{ fontSize: 15, color: 'var(--text-secondary)' }}>Manufacturer range: {min} to +{max} s/day</p>
         <div style={{ display: 'flex', gap: '1rem', marginTop: '0.5rem' }}>
           <span style={{ color: '#22c55e' }}>In spec: {inSpec}</span>
           <span style={{ color: '#ef4444' }}>Out of spec: {outSpec}</span>
@@ -65,11 +98,11 @@ export default function WatchDetail() {
       <div className="card">
         <h3 style={{ marginTop: 0 }}>Drift history</h3>
         {sorted.length === 0 ? (
-          <p style={{ color: '#888' }}>No readings yet. Run a drift test.</p>
+          <p style={{ color: 'var(--text-secondary)' }}>No readings yet. Run a drift test.</p>
         ) : (
           <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
             {sorted.slice(0, 20).map((r) => (
-              <li key={r.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '0.35rem 0', borderBottom: '1px solid #2a2c2e' }}>
+              <li key={r.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '0.35rem 0', borderBottom: '1px solid var(--border)' }}>
                 <span style={{ fontSize: '0.9rem' }}>{r.timestamp.toLocaleDateString()} {r.timestamp.toLocaleTimeString()}</span>
                 <span style={{ color: r.driftInSeconds < min || r.driftInSeconds > max ? '#ef4444' : '#22c55e' }}>
                   {r.driftInSeconds >= 0 ? '+' : ''}{r.driftInSeconds.toFixed(1)} s
@@ -77,6 +110,24 @@ export default function WatchDetail() {
               </li>
             ))}
           </ul>
+        )}
+      </div>
+
+      <div className="card">
+        <h3 style={{ marginTop: 0 }}>Service &amp; care</h3>
+        {serviceUrl ? (
+          <>
+            <p style={{ margin: '0 0 0.75rem', color: 'var(--text-secondary)', fontSize: 15 }}>
+              Find official {watch.brand} service centers and support.
+            </p>
+            <a href={serviceUrl} target="_blank" rel="noopener noreferrer" className="btn" style={{ width: '100%' }}>
+              Find official service
+            </a>
+          </>
+        ) : (
+          <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: 15 }}>
+            Search for “{watch.brand} official service” to find authorized centers. Closest centers by location and watchmaker listings coming soon.
+          </p>
         )}
       </div>
 
