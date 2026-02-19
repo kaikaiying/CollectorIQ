@@ -24,6 +24,21 @@ function stdDev(values) {
   return Math.sqrt(sqDiffs.reduce((a, b) => a + b, 0) / (values.length - 1))
 }
 
+function meanRatePerDay(readings) {
+  if (readings.length < 2) return null
+  const sorted = [...readings].sort((a, b) => a.timestamp - b.timestamp)
+  let sumRate = 0
+  let count = 0
+  for (let i = 0; i < sorted.length - 1; i++) {
+    const dt = (sorted[i + 1].timestamp - sorted[i].timestamp) / (1000 * 60 * 60 * 24)
+    if (dt > 0) {
+      sumRate += (sorted[i + 1].driftInSeconds - sorted[i].driftInSeconds) / dt
+      count++
+    }
+  }
+  return count > 0 ? sumRate / count : null
+}
+
 function rateStdDevPerDay(readings) {
   if (readings.length < 2) return null
   const sorted = [...readings].sort((a, b) => a.timestamp - b.timestamp)
@@ -84,8 +99,8 @@ function DriftChart({ readings }) {
         <svg className="drift-chart-svg" viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="xMidYMid meet">
           <defs>
             <linearGradient id="drift-area" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="var(--accent)" stopOpacity="0.12" />
-              <stop offset="100%" stopColor="var(--accent)" stopOpacity="0" />
+              <stop offset="0%" stopColor="rgba(255,255,255,0.06)" />
+              <stop offset="100%" stopColor="rgba(255,255,255,0)" />
             </linearGradient>
           </defs>
           {zeroLine}
@@ -140,6 +155,7 @@ export default function DriftTest() {
     const n = drifts.length
     const mean = drifts.reduce((a, b) => a + b, 0) / n
     const std = stdDev(drifts)
+    const meanRate = meanRatePerDay(readings)
     const rateStd = rateStdDevPerDay(readings)
     const min = drifts[0]
     const max = drifts[n - 1]
@@ -148,7 +164,7 @@ export default function DriftTest() {
     const specMax = selectedWatch?.specMax ?? 999
     const inSpecCount = readings.filter((r) => r.driftInSeconds >= specMin && r.driftInSeconds <= specMax).length
     return {
-      mean, std, rateStd, n, min, max, median,
+      mean, std, meanRate, rateStd, n, min, max, median,
       inSpecCount,
       specMin,
       specMax,
@@ -307,7 +323,7 @@ export default function DriftTest() {
 
   return (
     <div className="drift-test-page">
-      <PageSeo title="Drift test" description="Drift test your watch against atomic time. Tap when your watch hits the target — we measure accuracy in seconds. Compare to COSC and manufacturer specs." />
+      <PageSeo title="Drift test" description="Drift test your watch against atomic clock. Tap when it hits the target — measure accuracy in s/day. Collector IQ is the #1 watch atomic tracker." />
       <div className="drift-test-header">
         <h1 className="drift-test-title">Drift test</h1>
         <p className="drift-test-sub">Tap when your watch hits the target time. Server-synced accuracy.</p>
@@ -375,37 +391,27 @@ export default function DriftTest() {
       {selectedRef && readings.length > 0 && driftStats && (
         <div className="card drift-overview-card">
           <h2 className="drift-overview-title">Your drift data</h2>
-          <p className="drift-overview-meta">{driftStats.n} reading{driftStats.n !== 1 ? 's' : ''} · Each tap records seconds fast (+) or slow (−) vs server time</p>
+          <p className="drift-overview-meta">{driftStats.n} reading{driftStats.n !== 1 ? 's' : ''} · Each tap records seconds fast (+) or slow (−) vs atomic clock</p>
 
           {readings.length >= 2 && <DriftChart readings={readings} />}
 
           <table className="drift-stats-table">
             <tbody>
+              {driftStats.meanRate != null && (
+                <tr>
+                  <th>Rate</th>
+                  <td>{driftStats.meanRate >= 0 ? '+' : ''}{driftStats.meanRate.toFixed(1)} s/day</td>
+                </tr>
+              )}
               <tr>
                 <th>Mean offset</th>
                 <td>{driftStats.mean >= 0 ? '+' : ''}{driftStats.mean.toFixed(2)} s</td>
               </tr>
-              <tr>
-                <th>Median offset</th>
-                <td>{driftStats.median >= 0 ? '+' : ''}{driftStats.median.toFixed(2)} s</td>
-              </tr>
               {driftStats.n >= 2 && (
-                <>
-                  <tr>
-                    <th>Std dev</th>
-                    <td>{driftStats.std.toFixed(2)} s</td>
-                  </tr>
-                  {driftStats.rateStd != null && (
-                    <tr>
-                      <th>Rate variability</th>
-                      <td>±{Math.abs(driftStats.rateStd).toFixed(1)} s/day</td>
-                    </tr>
-                  )}
-                  <tr>
-                    <th>Min / Max</th>
-                    <td>{driftStats.min >= 0 ? '+' : ''}{driftStats.min.toFixed(1)} / {driftStats.max >= 0 ? '+' : ''}{driftStats.max.toFixed(1)} s</td>
-                  </tr>
-                </>
+                <tr>
+                  <th>Consistency (std dev)</th>
+                  <td>±{driftStats.std.toFixed(2)} s</td>
+                </tr>
               )}
             </tbody>
           </table>

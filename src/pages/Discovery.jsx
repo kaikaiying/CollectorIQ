@@ -111,7 +111,7 @@ export default function Discovery() {
 
   return (
     <>
-      <PageSeo title="Discovery" description="Community watch accuracy data vs manufacturer specs (s/day). See how Omega, Rolex, Seiko and others perform in the real world." />
+      <PageSeo title="Discovery" description="Community watch accuracy data vs manufacturer specs (s/day). See how Omega, Rolex, Seiko perform. Watch atomic tracker with real-world data." />
       <h1 className="page-title">Discovery</h1>
       <p style={{ color: 'var(--text-secondary)', marginBottom: 'var(--space)' }}>
         Collective real-world accuracy vs manufacturer specs. See if brands deliver what they claim.

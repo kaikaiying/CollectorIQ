@@ -4,22 +4,23 @@
 }
 
 :root {
-  --bg: #0c0c0d;
-  --bg-elevated: #131314;
-  --bg-card: #111112;
-  --bg-card-hover: #161618;
-  --border: rgba(255, 255, 255, 0.08);
-  --border-emphasis: rgba(255, 255, 255, 0.12);
-  --border-gold: rgba(199, 168, 90, 0.25);
-  --text: #fafaf9;
-  --text-secondary: #b4b4bc;
-  --text-tertiary: #8a8a92;
-  --accent: #c7a85a;
-  --accent-hover: #d4b96a;
-  --accent-subtle: rgba(199, 168, 90, 0.08);
+  --bg: #0a0a0c;
+  --bg-elevated: rgba(22, 22, 26, 0.6);
+  --bg-card: rgba(20, 20, 24, 0.5);
+  --bg-card-hover: rgba(28, 28, 32, 0.6);
+  --border: rgba(255, 255, 255, 0.06);
+  --border-emphasis: rgba(255, 255, 255, 0.1);
+  --border-gold: rgba(255, 255, 255, 0.15);
+  --text: #ffffff;
+  --text-secondary: #a8a8b0;
+  --text-tertiary: #787882;
+  --accent: #e8e8ec;
+  --accent-hover: #ffffff;
+  --accent-subtle: rgba(255, 255, 255, 0.06);
   --danger: #ef4444;
-  --radius: 12px;
-  --radius-sm: 8px;
+  --radius: 16px;
+  --radius-sm: 12px;
+  --radius-pill: 9999px;
   --space: 1rem;
   --space-lg: 1.5rem;
   --space-xl: 2rem;
@@ -36,7 +37,8 @@ body {
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background: var(--bg);
+  background: linear-gradient(145deg, #0a0a0c 0%, #12121a 40%, #0d0d12 100%);
+  background-attachment: fixed;
   color: var(--text);
   min-height: 100vh;
   letter-spacing: 0.01em;
@@ -47,10 +49,11 @@ body {
 }
 
 a {
-  color: var(--accent);
+  color: var(--text);
   text-decoration: none;
 }
 a:hover {
+  color: var(--text-secondary);
   text-decoration: underline;
 }
 
@@ -69,7 +72,7 @@ a:hover {
   width: 100%;
 }
 
-/* Bottom nav – refined, instrument-style */
+/* Bottom nav – glassmorphic, pill-style */
 .nav-tabs {
   position: fixed;
   bottom: 0;
@@ -78,13 +81,14 @@ a:hover {
   display: flex;
   justify-content: space-around;
   align-items: stretch;
-  min-height: 60px;
-  padding: 0.5rem 0.25rem max(0.5rem, env(safe-area-inset-bottom));
-  background: var(--bg-elevated);
+  min-height: 64px;
+  padding: 0.5rem 0.5rem max(0.5rem, env(safe-area-inset-bottom));
+  background: rgba(18, 18, 22, 0.65);
   border-top: 1px solid var(--border);
   max-width: 480px;
   margin: 0 auto;
-  backdrop-filter: blur(16px);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
 }
 
 .nav-tabs a {
@@ -109,8 +113,8 @@ a:hover {
 }
 
 .nav-tabs a.active {
-  color: var(--accent);
-  background: var(--accent-subtle);
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.06);
   position: relative;
 }
 
@@ -148,11 +152,15 @@ a:hover {
   padding: var(--space-lg);
   margin-bottom: var(--space);
   border: 1px solid var(--border);
-  transition: border-color 0.2s, background 0.2s;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
 }
 
 .card:hover {
   border-color: var(--border-emphasis);
+  background: var(--bg-card-hover);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2);
 }
 
 .section-title {
@@ -238,27 +246,30 @@ a:hover {
   margin: 0.5rem 0 0;
 }
 
-/* Buttons */
+/* Buttons – dark glass, rounded */
 .btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   min-height: var(--touch);
   padding: 0 1.5rem;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius);
   font-family: var(--font-body);
   font-size: 16px;
   font-weight: 600;
-  border: none;
+  border: 1px solid rgba(255, 255, 255, 0.08);
   cursor: pointer;
-  background: var(--accent);
-  color: #0a0a0b;
+  background: rgba(42, 42, 48, 0.8);
+  color: #ffffff;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   -webkit-tap-highlight-color: transparent;
-  transition: background 0.2s, opacity 0.2s, transform 0.1s;
+  transition: background 0.2s, opacity 0.2s, transform 0.1s, box-shadow 0.2s;
 }
 
 .btn:hover:not(:disabled) {
-  background: var(--accent-hover);
+  background: rgba(50, 50, 56, 0.9);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.2);
 }
 
 .btn:active:not(:disabled) {
@@ -271,14 +282,27 @@ a:hover {
 }
 
 .btn-secondary {
-  background: transparent;
+  background: rgba(255, 255, 255, 0.03);
   color: var(--text-secondary);
   border: 1px solid var(--border-emphasis);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 
 .btn-secondary:hover:not(:disabled) {
-  background: var(--border);
+  background: rgba(255, 255, 255, 0.06);
   color: var(--text);
+}
+
+.btn-link {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  text-decoration: none;
+}
+.btn-link:hover {
+  text-decoration: underline;
 }
 
 .input,
@@ -288,11 +312,20 @@ a:hover {
   padding: 0 1rem;
   border-radius: var(--radius-sm);
   border: 1px solid var(--border);
-  background: var(--bg);
+  background: rgba(18, 18, 22, 0.6);
   color: var(--text);
   font-size: 17px;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   -webkit-appearance: none;
   appearance: none;
+  transition: border-color 0.2s, background 0.2s;
+}
+.input:focus,
+.select:focus {
+  outline: none;
+  border-color: var(--border-emphasis);
+  background: rgba(24, 24, 28, 0.7);
 }
 
 .input::placeholder {
@@ -388,10 +421,12 @@ a:hover {
   width: 100%;
   min-height: 48px;
   padding: 0 16px;
-  border-radius: var(--radius-sm);
-  border: 1px solid #747775;
-  background: #fff;
-  color: #1f1f1f;
+  border-radius: var(--radius);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: #fff;
   font-family: Roboto, -apple-system, BlinkMacSystemFont, sans-serif;
   font-size: 15px;
   font-weight: 500;
@@ -401,8 +436,8 @@ a:hover {
 }
 
 .btn-google:hover:not(:disabled) {
-  background: #f5f5f5;
-  border-color: #5f6368;
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.18);
 }
 
 .btn-google:disabled {
@@ -425,9 +460,11 @@ a:hover {
   width: 100%;
   min-height: 48px;
   padding: 0 16px;
-  border-radius: var(--radius-sm);
-  border: none;
-  background: #000;
+  border-radius: var(--radius);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   color: #fff;
   font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif;
   font-size: 16px;
@@ -439,7 +476,7 @@ a:hover {
 }
 
 .btn-apple:hover:not(:disabled) {
-  background: #1a1a1a;
+  background: rgba(30, 30, 30, 0.6);
 }
 
 .btn-apple:disabled {
@@ -504,7 +541,7 @@ a:hover {
 }
 .drift-test-title {
   font-family: var(--font-display);
-  font-size: 1.35rem;
+  font-size: 1.75rem;
   font-weight: 600;
   margin: 0 0 0.25rem;
   color: var(--text);
@@ -528,18 +565,21 @@ a:hover {
   padding: var(--space);
   border-radius: var(--radius);
   border: 1px solid var(--border);
-  background: var(--bg-card);
+  background: rgba(20, 20, 24, 0.5);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   cursor: pointer;
-  transition: border-color 0.2s, background 0.2s;
+  transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
   color: var(--text);
 }
 .drift-watch-card:hover {
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(28, 28, 32, 0.6);
   border-color: rgba(255, 255, 255, 0.1);
 }
 .drift-watch-card.selected {
-  border-color: var(--accent);
-  background: var(--accent-subtle);
+  border-color: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.06);
+  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.15);
 }
 .drift-watch-card strong {
   display: block;
@@ -655,14 +695,16 @@ a:hover {
 }
 .drift-chart-block {
   margin-bottom: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
 }
 .drift-chart-header {
   display: flex;
   justify-content: space-between;
   align-items: baseline;
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.75rem;
   font-size: 14px;
-  color: var(--text-secondary);
+  color: var(--text);
   font-weight: 500;
 }
 .drift-chart-n {
@@ -675,9 +717,9 @@ a:hover {
   min-height: 180px;
   border-radius: var(--radius-sm);
   overflow: hidden;
-  background: linear-gradient(180deg, rgba(255,255,255,0.03) 0%, transparent 100%);
+  background: rgba(255, 255, 255, 0.02);
   border: 1px solid var(--border);
-  padding: 0.75rem;
+  padding: 1rem;
 }
 .drift-chart-svg {
   width: 100%;
@@ -685,28 +727,31 @@ a:hover {
   display: block;
 }
 .drift-chart-line {
-  stroke: var(--accent);
+  stroke: rgba(255, 255, 255, 0.9);
   stroke-width: 2.5;
-  stroke-opacity: 0.95;
+  stroke-opacity: 0.9;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 .drift-chart-tick {
-  stroke: var(--border);
+  stroke: var(--border-emphasis);
   stroke-width: 1;
 }
 .drift-chart-tick-label {
-  fill: var(--text-secondary);
-  font-size: 12px;
+  fill: var(--text-tertiary);
+  font-size: 11px;
   font-family: var(--font-body);
   font-weight: 500;
 }
 .drift-chart-zero {
   stroke: var(--text-tertiary);
-  stroke-opacity: 0.5;
+  stroke-opacity: 0.4;
+  stroke-dasharray: 4 4;
 }
 .drift-chart-legend {
   display: flex;
   justify-content: space-between;
-  margin-top: 0.35rem;
+  margin-top: 0.5rem;
   font-size: 12px;
   color: var(--text-tertiary);
   font-weight: 400;

@@ -39,7 +39,7 @@ export default function Collection() {
 
   return (
     <>
-      <PageSeo title="Collection" description="Your watch collection. Track accuracy for each timepiece." />
+      <PageSeo title="Collection" description="Your watch collection. Track accuracy for each timepiece with the #1 watch atomic tracker. Drift test vs atomic clock." />
       <h1 className="page-title">Collection</h1>
 
       {watches.length === 0 ? (

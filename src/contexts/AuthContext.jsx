@@ -4,6 +4,7 @@ import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   signInWithPopup,
+  sendPasswordResetEmail,
   signOut as firebaseSignOut,
   updateProfile,
   GoogleAuthProvider,
@@ -64,6 +65,11 @@ export function AuthProvider({ children }) {
     await firebaseSignOut(auth)
   }
 
+  const resetPassword = async (email) => {
+    if (!auth) return
+    await sendPasswordResetEmail(auth, email)
+  }
+
   const value = {
     user,
     loading,
@@ -73,6 +79,7 @@ export function AuthProvider({ children }) {
     signInWithGoogle,
     signInWithApple,
     signOut,
+    resetPassword,
   }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
