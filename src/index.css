@@ -1,36 +1,45 @@
-/* Collector IQ – minimal, Apple-like */
+/* Collector IQ – industry-leading watch accuracy tracker */
 * {
   box-sizing: border-box;
 }
 
 :root {
-  --bg: #0d1117;
-  --bg-elevated: #161b22;
-  --bg-card: #161b22;
+  --bg: #0c0c0d;
+  --bg-elevated: #131314;
+  --bg-card: #111112;
+  --bg-card-hover: #161618;
   --border: rgba(255, 255, 255, 0.08);
-  --text: #e6edf3;
-  --text-secondary: #8b949e;
-  --text-tertiary: #6e7681;
-  --accent: #ebb60c;
-  --accent-hover: #f5c42a;
-  --danger: #f85149;
-  --radius: 14px;
-  --radius-sm: 10px;
+  --border-emphasis: rgba(255, 255, 255, 0.12);
+  --border-gold: rgba(199, 168, 90, 0.25);
+  --text: #fafaf9;
+  --text-secondary: #b4b4bc;
+  --text-tertiary: #8a8a92;
+  --accent: #c7a85a;
+  --accent-hover: #d4b96a;
+  --accent-subtle: rgba(199, 168, 90, 0.08);
+  --danger: #ef4444;
+  --radius: 12px;
+  --radius-sm: 8px;
   --space: 1rem;
   --space-lg: 1.5rem;
   --space-xl: 2rem;
-  --touch: 44px;
+  --touch: 48px;
+  --font-display: 'Cormorant Garamond', Georgia, serif;
+  --font-body: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 body {
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, sans-serif;
+  font-family: var(--font-body);
   font-size: 17px;
-  line-height: 1.45;
+  font-weight: 400;
+  line-height: 1.5;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
   background: var(--bg);
   color: var(--text);
   min-height: 100vh;
+  letter-spacing: 0.01em;
 }
 
 #root {
@@ -60,7 +69,7 @@ a:hover {
   width: 100%;
 }
 
-/* Bottom nav – iOS-like */
+/* Bottom nav – refined, instrument-style */
 .nav-tabs {
   position: fixed;
   bottom: 0;
@@ -68,13 +77,14 @@ a:hover {
   right: 0;
   display: flex;
   justify-content: space-around;
-  align-items: center;
-  min-height: var(--touch);
-  padding: 0.5rem 0 max(0.5rem, env(safe-area-inset-bottom));
+  align-items: stretch;
+  min-height: 60px;
+  padding: 0.5rem 0.25rem max(0.5rem, env(safe-area-inset-bottom));
   background: var(--bg-elevated);
   border-top: 1px solid var(--border);
   max-width: 480px;
   margin: 0 auto;
+  backdrop-filter: blur(16px);
 }
 
 .nav-tabs a {
@@ -82,26 +92,54 @@ a:hover {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 0.2rem;
-  padding: 0.5rem 0.75rem;
-  font-size: 10px;
+  gap: 0.25rem;
+  padding: 0.5rem 0.65rem;
+  min-width: 76px;
+  font-size: 12px;
   font-weight: 500;
-  color: var(--text-tertiary);
+  color: var(--text-secondary);
   text-decoration: none;
   -webkit-tap-highlight-color: transparent;
+  border-radius: var(--radius-sm);
+  transition: color 0.2s, background 0.2s;
+}
+
+.nav-tabs a:hover {
+  color: var(--text-secondary);
 }
 
 .nav-tabs a.active {
   color: var(--accent);
+  background: var(--accent-subtle);
+  position: relative;
 }
 
-/* Typography */
+.nav-tabs a.active::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 20px;
+  height: 1px;
+  background: var(--accent);
+}
+
+/* Typography – display for headings, body for UI */
 .page-title {
-  font-size: 28px;
-  font-weight: 700;
-  letter-spacing: -0.02em;
+  font-family: var(--font-display);
+  font-size: 1.75rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
   margin: 0 0 var(--space);
   color: var(--text);
+  line-height: 1.25;
+}
+.watch-model-title {
+  font-family: var(--font-body);
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
 }
 
 .card {
@@ -110,6 +148,94 @@ a:hover {
   padding: var(--space-lg);
   margin-bottom: var(--space);
   border: 1px solid var(--border);
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.card:hover {
+  border-color: var(--border-emphasis);
+}
+
+.section-title {
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  font-weight: 500;
+  margin: 0 0 0.5rem;
+  color: var(--text);
+  letter-spacing: 0.02em;
+}
+
+/* Collection list – tap goes to Drift Test, Spec link for detail */
+.collection-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+.collection-item-link {
+  flex: 1;
+  min-width: 0;
+  color: inherit;
+  text-decoration: none;
+}
+.collection-item-link:hover {
+  text-decoration: none;
+  color: var(--text);
+}
+.collection-item-link strong {
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 1.15rem;
+  color: var(--text);
+  line-height: 1.3;
+}
+.collection-item-meta {
+  font-size: 14px;
+  color: var(--text-secondary);
+  letter-spacing: 0.01em;
+}
+.collection-item-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+.collection-item-spec {
+  font-size: 14px;
+  color: var(--text-secondary);
+  padding: 0.35rem 0.5rem;
+}
+.collection-item-spec:hover {
+  color: var(--accent);
+}
+.collection-item-remove {
+  padding: 0.5rem 0.75rem;
+  font-size: 0.85rem;
+}
+
+/* Paywall – subscribe to add more watches */
+.paywall-card {
+  color: var(--text);
+}
+.paywall-title {
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 500;
+  margin: 0 0 0.35rem;
+}
+.paywall-buttons {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+.paywall-desc {
+  font-size: 15px;
+  color: var(--text-secondary);
+  margin: 0;
+  line-height: 1.4;
+}
+.paywall-hint {
+  font-size: 13px;
+  color: var(--text-tertiary);
+  margin: 0.5rem 0 0;
 }
 
 /* Buttons */
@@ -118,20 +244,25 @@ a:hover {
   align-items: center;
   justify-content: center;
   min-height: var(--touch);
-  padding: 0 1.25rem;
+  padding: 0 1.5rem;
   border-radius: var(--radius-sm);
-  font-size: 17px;
+  font-family: var(--font-body);
+  font-size: 16px;
   font-weight: 600;
   border: none;
   cursor: pointer;
   background: var(--accent);
-  color: #0d1117;
+  color: #0a0a0b;
   -webkit-tap-highlight-color: transparent;
-  transition: background 0.2s, opacity 0.2s;
+  transition: background 0.2s, opacity 0.2s, transform 0.1s;
 }
 
 .btn:hover:not(:disabled) {
   background: var(--accent-hover);
+}
+
+.btn:active:not(:disabled) {
+  transform: scale(0.99);
 }
 
 .btn:disabled {
@@ -140,13 +271,14 @@ a:hover {
 }
 
 .btn-secondary {
-  background: var(--bg-elevated);
-  color: var(--text);
-  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid var(--border-emphasis);
 }
 
 .btn-secondary:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--border);
+  color: var(--text);
 }
 
 .input,
@@ -170,8 +302,8 @@ a:hover {
 .label {
   display: block;
   font-size: 13px;
-  font-weight: 500;
-  margin-bottom: 0.35rem;
+  font-weight: 600;
+  margin-bottom: 0.4rem;
   color: var(--text-secondary);
 }
 
@@ -185,8 +317,8 @@ a:hover {
 }
 
 .login-logo-wrap {
-  width: 120px;
-  height: 120px;
+  width: 100px;
+  height: 100px;
   border-radius: 50%;
   overflow: hidden;
   background: #fff;
@@ -194,23 +326,57 @@ a:hover {
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(255, 255, 255, 0.06);
+  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.04);
   flex-shrink: 0;
 }
 
 .login-logo {
   width: 100%;
   height: 100%;
-  object-fit: contain;
+  object-fit: cover;
   object-position: center;
   display: block;
+}
+
+.login-headline {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin: 0 0 0.5rem;
+  color: var(--text);
 }
 
 .login-tagline {
   font-size: 15px;
   color: var(--text-secondary);
-  margin: 0;
-  max-width: 260px;
+  margin: 0 0 1rem;
+  max-width: 320px;
+  line-height: 1.45;
+}
+
+.login-how {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 var(--space-lg);
+  font-size: 14px;
+  color: var(--text-secondary);
+  text-align: left;
+  max-width: 280px;
+}
+
+.login-how li {
+  padding: 0.35rem 0;
+  padding-left: 1.25rem;
+  position: relative;
+  line-height: 1.4;
+}
+
+.login-how li::before {
+  content: '→';
+  position: absolute;
+  left: 0;
+  color: var(--accent);
+  font-weight: 600;
 }
 
 /* Sign in with Google – branding guidelines */
@@ -289,9 +455,10 @@ a:hover {
 
 /* Footer / secondary text */
 .app-footer {
-  font-size: 13px;
+  font-size: 12px;
   color: var(--text-tertiary);
   margin-top: var(--space-xl);
+  letter-spacing: 0.02em;
 }
 
 .error-message {
@@ -300,11 +467,493 @@ a:hover {
   margin-bottom: 0.5rem;
 }
 
-/* Discovery – collective accountability table */
+.settings-portal-hint {
+  font-size: 13px;
+  color: var(--text-tertiary);
+  margin: 0.5rem 0 0;
+  line-height: 1.4;
+}
+
+.settings-help-list {
+  margin: 0.75rem 0 0;
+  padding-left: 1.25rem;
+  font-size: 15px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.settings-help-list li {
+  margin-bottom: 0.5rem;
+}
+
+.settings-help-list a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.settings-help-list a:hover {
+  text-decoration: underline;
+}
+
+/* Drift test – dashboard layout */
+.drift-test-page .drift-overview-card {
+  margin-top: var(--space-lg);
+}
+.drift-test-header {
+  margin-bottom: 1rem;
+}
+.drift-test-title {
+  font-family: var(--font-display);
+  font-size: 1.35rem;
+  font-weight: 600;
+  margin: 0 0 0.25rem;
+  color: var(--text);
+}
+.drift-test-sub {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin: 0;
+  line-height: 1.4;
+}
+.drift-watch-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: var(--space-lg);
+}
+.drift-watch-card {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: var(--space);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+  color: var(--text);
+}
+.drift-watch-card:hover {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+.drift-watch-card.selected {
+  border-color: var(--accent);
+  background: var(--accent-subtle);
+}
+.drift-watch-card strong {
+  display: block;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 0.2rem;
+  line-height: 1.3;
+}
+.drift-watch-card .drift-watch-meta {
+  font-size: 15px;
+  color: var(--text-secondary);
+}
+
+.drift-target-card {
+  text-align: center;
+  padding: var(--space-lg);
+}
+.drift-target-card .target-time {
+  font-family: var(--font-body);
+  font-size: 2.75rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--text);
+  margin-bottom: 0.15rem;
+}
+.drift-target-card .tz-label {
+  font-size: 13px;
+  color: var(--text-tertiary);
+}
+.drift-reference-time {
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+.drift-reference-time strong {
+  font-variant-numeric: tabular-nums;
+  color: var(--accent);
+}
+.drift-target-card .countdown {
+  font-size: 15px;
+  color: var(--text-tertiary);
+  margin-top: 0.5rem;
+}
+.drift-target-card .tap-now {
+  font-size: 15px;
+  color: var(--accent);
+  margin-top: 0.5rem;
+}
+
+/* Target time – arrow up/down per digit (h, m, s) */
+.target-time-editable {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem 0.75rem;
+  flex-wrap: wrap;
+}
+.target-time-segment {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+}
+.target-arrow {
+  min-width: 44px;
+  min-height: 36px;
+  padding: 0.35rem;
+  font-size: 1.1rem;
+  line-height: 1;
+  font-weight: 600;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-elevated);
+  color: var(--text);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.target-arrow:hover {
+  color: var(--accent);
+  border-color: var(--border-gold);
+  background: rgba(255, 255, 255, 0.04);
+}
+.target-digit {
+  font-family: var(--font-body);
+  font-size: 2rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  color: var(--text);
+  letter-spacing: 0.04em;
+  min-width: 2.2ch;
+  text-align: center;
+}
+.target-time-colon {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--text);
+  opacity: 0.85;
+  align-self: center;
+}
+
+/* Drift overview – chart + stats */
+.drift-stats-card {
+  color: var(--text);
+}
+.drift-overview-hint {
+  font-size: 15px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin: 0 0 0.75rem;
+}
+.drift-chart-block {
+  margin-bottom: 1.25rem;
+}
+.drift-chart-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 0.5rem;
+  font-size: 14px;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+.drift-chart-n {
+  font-size: 13px;
+  color: var(--text-tertiary);
+  font-weight: 400;
+}
+.drift-chart-svg-wrap {
+  width: 100%;
+  min-height: 180px;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  background: linear-gradient(180deg, rgba(255,255,255,0.03) 0%, transparent 100%);
+  border: 1px solid var(--border);
+  padding: 0.75rem;
+}
+.drift-chart-svg {
+  width: 100%;
+  height: 160px;
+  display: block;
+}
+.drift-chart-line {
+  stroke: var(--accent);
+  stroke-width: 2.5;
+  stroke-opacity: 0.95;
+}
+.drift-chart-tick {
+  stroke: var(--border);
+  stroke-width: 1;
+}
+.drift-chart-tick-label {
+  fill: var(--text-secondary);
+  font-size: 12px;
+  font-family: var(--font-body);
+  font-weight: 500;
+}
+.drift-chart-zero {
+  stroke: var(--text-tertiary);
+  stroke-opacity: 0.5;
+}
+.drift-chart-legend {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 0.35rem;
+  font-size: 12px;
+  color: var(--text-tertiary);
+  font-weight: 400;
+}
+.drift-stats-dl {
+  margin: 0;
+  display: grid;
+  gap: 0.35rem 0;
+}
+.drift-stat-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.5rem 1rem;
+  align-items: baseline;
+  font-size: 15px;
+  line-height: 1.4;
+}
+.drift-stat-row dt {
+  margin: 0;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+.drift-stat-row dd {
+  margin: 0;
+  color: var(--text);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Best-in-class drift overview */
+.drift-overview-card {
+  color: var(--text);
+}
+.drift-overview-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-bottom: 0.25rem;
+}
+.drift-overview-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 0;
+  color: var(--text);
+}
+.drift-overview-n {
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+.drift-overview-card .drift-overview-hint,
+.drift-overview-card .drift-overview-meta {
+  margin-bottom: 0.75rem;
+}
+.drift-overview-meta {
+  font-size: 15px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin: 0 0 1rem;
+}
+
+/* Stats table */
+.drift-stats-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  margin-bottom: 1rem;
+}
+.drift-stats-table th {
+  text-align: left;
+  font-weight: 500;
+  font-size: 15px;
+  color: var(--text-secondary);
+  padding: 0.4rem 0.75rem 0.4rem 0;
+  vertical-align: baseline;
+}
+.drift-stat-unit {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--text-tertiary);
+}
+.drift-stats-table td {
+  text-align: right;
+  padding: 0.35rem 0;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  font-size: 15px;
+  letter-spacing: 0.02em;
+  color: var(--text);
+}
+.drift-stat-value {
+  font-weight: 600;
+}
+
+/* Spec compliance block */
+.drift-spec-block {
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+  margin-bottom: 1rem;
+}
+.drift-spec-title,
+.drift-community-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin: 0 0 0.35rem;
+}
+.drift-spec-range {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin: 0 0 0.25rem;
+}
+.drift-spec-count {
+  margin: 0;
+  font-size: 15px;
+  color: var(--text);
+}
+.drift-spec-pct {
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+/* Community comparison block */
+.drift-community-block {
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+}
+.drift-community-meta {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin: 0 0 0.35rem;
+}
+.drift-community-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.25rem;
+  font-size: 14px;
+  color: var(--text);
+  margin-bottom: 0.35rem;
+}
+.drift-community-stats strong {
+  font-variant-numeric: tabular-nums;
+}
+.drift-community-compare {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin: 0;
+}
+.drift-community-compare strong {
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Watch detail – drift history row with delete */
+.drift-history-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0;
+  border-bottom: 1px solid var(--border);
+}
+.drift-history-meta {
+  font-size: 0.9rem;
+  color: var(--text);
+  flex: 1;
+  min-width: 0;
+}
+.drift-history-value {
+  font-size: 0.9rem;
+}
+.drift-history-delete {
+  padding: 0.2rem 0.5rem;
+  font-size: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-tertiary);
+  cursor: pointer;
+}
+.drift-history-delete:hover {
+  color: var(--danger);
+  border-color: rgba(248, 81, 73, 0.4);
+}
+
+/* Discovery – legend + table */
+.discovery-legend {
+  font-size: 13px;
+  color: var(--text-tertiary);
+  line-height: 1.4;
+  margin: 0 0 var(--space-lg);
+}
+.discovery-legend strong {
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.discovery-tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+.discovery-view-desc {
+  font-size: 14px;
+  color: var(--text-secondary);
+  line-height: 1.4;
+  margin: 0 0 var(--space-lg);
+}
+
+.discovery-search-wrap {
+  margin-bottom: 1rem;
+}
+
+.discovery-search-input {
+  width: 100%;
+  padding: 0.65rem 1rem;
+  font-size: 15px;
+  font-family: var(--font-body);
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  outline: none;
+}
+
+.discovery-search-input::placeholder {
+  color: var(--text-tertiary);
+}
+
+.discovery-search-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-subtle);
+}
+
+.discovery-table-card {
+  overflow-x: auto;
+  padding: 0;
+}
+
 .discovery-table {
   width: 100%;
   border-collapse: collapse;
   font-size: 14px;
+  min-width: 420px;
 }
 
 .discovery-table th,
@@ -315,9 +964,10 @@ a:hover {
 }
 
 .discovery-table th {
+  font-size: 12px;
   font-weight: 600;
   color: var(--text-secondary);
-  background: rgba(0, 0, 0, 0.2);
+  background: rgba(0, 0, 0, 0.25);
   white-space: nowrap;
 }
 
@@ -378,4 +1028,96 @@ a:hover {
     border-bottom: 1px solid var(--border);
     padding: 0.5rem 0;
   }
+}
+
+/* Share results page (public) */
+.share-results-card {
+  max-width: 420px;
+  margin: 0 auto;
+}
+.share-results-label {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-tertiary);
+  margin: 0 0 0.25rem;
+}
+.share-results-title {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin: 0 0 0.25rem;
+  color: var(--text);
+}
+.share-results-ref {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin: 0 0 1rem;
+}
+.share-results-dl {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.25rem 1.5rem;
+  margin: 0 0 1rem;
+  font-size: 15px;
+}
+.share-results-dl dt {
+  color: var(--text-secondary);
+  margin: 0;
+}
+.share-results-dl dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+}
+.share-results-cta {
+  font-size: 13px;
+  color: var(--text-tertiary);
+  margin: 0 0 0.75rem;
+}
+
+/* Ask (AI) page */
+.ask-messages {
+  min-height: 160px;
+  margin-bottom: 1rem;
+  overflow-y: auto;
+}
+.ask-placeholder {
+  font-size: 14px;
+  color: var(--text-tertiary);
+  margin: 0;
+  font-style: italic;
+}
+.ask-msg {
+  margin-bottom: 0.75rem;
+}
+.ask-msg-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-tertiary);
+  display: block;
+  margin-bottom: 0.2rem;
+}
+.ask-msg--assistant .ask-msg-label { color: var(--accent); }
+.ask-msg-text {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--text);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.ask-msg-text--loading { color: var(--text-tertiary); }
+.ask-input-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+.ask-input {
+  flex: 1;
+  min-height: 44px;
+  margin: 0;
+}
+.ask-send {
+  flex-shrink: 0;
 }

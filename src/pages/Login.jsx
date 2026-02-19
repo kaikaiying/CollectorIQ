@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
+import PageSeo from '../components/PageSeo'
 
 export default function Login() {
   const [mode, setMode] = useState('signin')
@@ -73,7 +74,13 @@ export default function Login() {
       <div className="login-logo-wrap">
         <img src="/logo.png" alt="Collector IQ" className="login-logo" />
       </div>
-      <p className="login-tagline">Track your watch accuracy. Know when it needs care.</p>
+      <h1 className="login-headline">Track your watch accuracy</h1>
+      <p className="login-tagline">Why Collector IQ:</p>
+      <ul className="login-how">
+        <li><strong>Watch accuracy tracker</strong> — drift test vs atomic time, compare to COSC and manufacturer specs (s/day)</li>
+        <li><strong>Community data</strong> — see how your watch and brands perform in the real world, not just on paper</li>
+        <li><strong>Your data, your control</strong> — export anytime, reset when you correct your watch, first watch free</li>
+      </ul>
     </div>
   )
 
@@ -88,6 +95,7 @@ export default function Login() {
 
   return (
     <div className="app-main" style={{ paddingTop: '1.5rem' }}>
+      <PageSeo title="Sign in" description="Track mechanical and automatic watch accuracy with drift tests vs atomic time. Compare to COSC specs. Free for watch collectors — sign in or register." />
       {brandBlock}
 
       <form onSubmit={handleEmailSubmit} style={{ marginBottom: 'var(--space-lg)', textAlign: 'left' }}>
@@ -185,6 +193,10 @@ export default function Login() {
       <p className="app-footer" style={{ textAlign: 'center' }}>
         By continuing you agree to our{' '}
         <Link to="/privacy">Terms and Privacy Policy</Link>.
+        {' · '}
+        <Link to="/subscribe">Pricing</Link>
+        {' · '}
+        <Link to="/community">Share with your watch community</Link>
       </p>
     </div>
   )

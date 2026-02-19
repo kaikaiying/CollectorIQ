@@ -1,6 +1,8 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getCollection, setCollection } from '../App'
+import { useAuth } from '../contexts/AuthContext'
+import { getSubscriptionStatus, FIRST_WATCH_FREE, SUBSCRIPTION_PRICE_DISPLAY, TRIAL_DAYS } from '../lib/subscription'
 import {
   MOVEMENT_TYPES,
   CATEGORIES,
@@ -14,14 +16,67 @@ function parseSpec(s) {
   return Number.isFinite(n) ? n : null
 }
 
+function getApiBase() {
+  if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL.replace(/\/$/, '')
+  if (typeof window !== 'undefined') return ''
+  return ''
+}
+
 export default function AddWatch() {
+  const { user } = useAuth()
   const [mode, setMode] = useState('catalog') // 'catalog' | 'custom'
   const [specs, setSpecs] = useState([])
   const [brand, setBrand] = useState('')
   const [model, setModel] = useState('')
   const [reference, setReference] = useState('')
   const [loading, setLoading] = useState(true)
+  const [subLoading, setSubLoading] = useState(true)
+  const [hasActiveSubscription, setHasActiveSubscription] = useState(false)
+  const [checkoutLoading, setCheckoutLoading] = useState(false)
   const navigate = useNavigate()
+  const collectionLength = getCollection().length
+  const needsSubscription = collectionLength >= FIRST_WATCH_FREE
+
+  useEffect(() => {
+    if (!user?.uid || !needsSubscription) {
+      setSubLoading(false)
+      if (!needsSubscription) setHasActiveSubscription(true)
+      return
+    }
+    let cancelled = false
+    getSubscriptionStatus(user.uid).then(({ hasActiveSubscription: active }) => {
+      if (!cancelled) {
+        setHasActiveSubscription(active)
+        setSubLoading(false)
+      }
+    })
+    return () => { cancelled = true }
+  }, [user?.uid, needsSubscription])
+
+  const startCheckout = useCallback(async (plan = 'monthly') => {
+    if (!user || checkoutLoading) return
+    setCheckoutLoading(true)
+    try {
+      const token = await user.getIdToken()
+      const base = getApiBase()
+      const res = await fetch(`${base}/api/create-checkout-session`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          successUrl: window.location.origin + '/?subscription=success',
+          cancelUrl: window.location.origin + '/add-watch',
+          plan,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Checkout failed')
+      if (data.url) window.location.href = data.url
+      else throw new Error('No checkout URL')
+    } catch (e) {
+      setCheckoutLoading(false)
+      alert(e.message || 'Something went wrong. Try again.')
+    }
+  }, [user, checkoutLoading])
 
   // Custom form state
   const [customBrand, setCustomBrand] = useState('')
@@ -117,6 +172,44 @@ export default function AddWatch() {
 
   if (loading && mode === 'catalog') {
     return <p className="page-title">Loading…</p>
+  }
+
+  if (needsSubscription && subLoading) {
+    return (
+      <>
+        <h1 className="page-title">Add watch</h1>
+        <p style={{ color: 'var(--text-secondary)' }}>Loading…</p>
+      </>
+    )
+  }
+
+  if (needsSubscription && !hasActiveSubscription) {
+    return (
+      <>
+        <h1 className="page-title">Add watch</h1>
+        <div className="card paywall-card">
+          <p className="paywall-title">Add more watches</p>
+          <p className="paywall-desc">
+            Your first watch is free. Add unlimited watches with <strong>{TRIAL_DAYS} days free</strong>, then {SUBSCRIPTION_PRICE_DISPLAY}.
+          </p>
+          <div className="paywall-buttons">
+            <button
+              type="button"
+              className="btn"
+              style={{ width: '100%' }}
+              onClick={() => startCheckout('monthly')}
+              disabled={checkoutLoading}
+            >
+              {checkoutLoading ? 'Opening…' : `Subscribe — ${SUBSCRIPTION_PRICE_DISPLAY}`}
+            </button>
+          </div>
+          <p className="paywall-hint">You can cancel anytime. Payment is handled securely by Stripe.</p>
+        </div>
+        <button type="button" className="btn btn-secondary" style={{ width: '100%', marginTop: '0.5rem' }} onClick={() => navigate('/')}>
+          Back to collection
+        </button>
+      </>
+    )
   }
 
   return (

@@ -1,7 +1,7 @@
 import { Link, useNavigate } from 'react-router-dom'
 
-const Section = ({ title, children }) => (
-  <section style={{ marginBottom: '1.5rem' }}>
+const Section = ({ title, id, children }) => (
+  <section id={id} style={{ marginBottom: '1.5rem' }}>
     <h2 style={{ fontSize: '1.1rem', fontWeight: 600, marginBottom: '0.5rem', color: 'var(--text)' }}>{title}</h2>
     <div style={{ fontSize: 15, color: 'var(--text-secondary)', lineHeight: 1.6 }}>{children}</div>
   </section>
@@ -138,8 +138,28 @@ export default function PrivacyPolicy() {
         <P>We may update this policy periodically. We will notify you of material changes through the app or other means. Continued use of the app constitutes acceptance of the revised policy.</P>
       </Section>
 
+      <Section title="Refunds" id="refunds">
+        <P>You may request a refund for any subscription charge within 14 days of the charge date. To request a refund, contact us at support@collectoriq.app with the email address associated with your account and the date of the charge. We will process refund requests within 5 business days. Refunds are issued to the original payment method.</P>
+        <P>If you cancel during a free trial, you will not be charged. If you were charged before canceling, you may request a refund under the 14-day policy above.</P>
+      </Section>
+
+      <Section title="Cancellations">
+        <P>You can cancel your subscription at any time. To cancel:</P>
+        <List items={[
+          'Go to Settings → Manage subscription (opens our secure billing portal), or',
+          'Email us at support@collectoriq.app and we will cancel for you.',
+        ]} />
+        <P>After canceling, you will keep access until the end of your current billing period. When your subscription ends, you will still have access to your first watch and all its data; adding additional watches will require a new subscription.</P>
+      </Section>
+
+      <Section title="Subscription questions &amp; support">
+        <P>For questions about subscriptions, billing, refunds, or any other support:</P>
+        <P><strong>Email:</strong> support@collectoriq.app</P>
+        <P>We aim to respond within 1–2 business days.</P>
+      </Section>
+
       <Section title="Contact Us">
-        <P>If you have any questions or concerns, contact us at: support@collectoriq.app</P>
+        <P>If you have any other questions or concerns, contact us at: support@collectoriq.app</P>
       </Section>
 
       <P style={{ marginTop: '1.5rem' }}>By using CollectorIQ, you consent to this Privacy Policy.</P>

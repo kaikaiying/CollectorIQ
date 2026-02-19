@@ -12,6 +12,8 @@ const AGGREGATES = 'aggregates'
 
 /**
  * Upload one drift reading and update the per-reference aggregate.
+ * Privacy: we never store uid or any user identifier. Only watch reference + drift value.
+ * Raw readings are not readable by clients (Firestore rules). Only aggregates are public.
  * @param {{ reference: string, brand: string, model: string, specMin?: number, specMax?: number }} watch
  * @param {number} driftInSeconds
  * @param {Date} timestamp

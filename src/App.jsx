@@ -8,6 +8,10 @@ import Discovery from './pages/Discovery'
 import Settings from './pages/Settings'
 import AddWatch from './pages/AddWatch'
 import PrivacyPolicy from './pages/PrivacyPolicy'
+import ShareResults from './pages/ShareResults'
+import Community from './pages/Community'
+import Subscribe from './pages/Subscribe'
+import Ask from './pages/Ask'
 
 const COLLECTION_KEY = 'collectoriq_collection'
 
@@ -30,8 +34,11 @@ function AppContent() {
   const isLogin = location.pathname === '/login'
   const isAddWatch = location.pathname === '/add-watch'
   const isPrivacy = location.pathname === '/privacy'
+  const isShare = location.pathname === '/share'
+  const isCommunity = location.pathname === '/community'
+  const isSubscribe = location.pathname === '/subscribe'
 
-  if (loading) {
+  if (loading && !isShare && !isCommunity && !isSubscribe) {
     return (
       <div className="app-layout" style={{ alignItems: 'center', justifyContent: 'center', padding: '2rem' }}>
         <div className="login-logo-wrap" style={{ width: 80, height: 80, marginBottom: '1rem' }}>
@@ -42,7 +49,7 @@ function AppContent() {
     )
   }
 
-  if (!user && !isLogin && !isPrivacy) {
+  if (!user && !isLogin && !isPrivacy && !isShare && !isCommunity && !isSubscribe) {
     return <Navigate to="/login" replace />
   }
 
@@ -52,20 +59,25 @@ function AppContent() {
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/privacy" element={<PrivacyPolicy />} />
+          <Route path="/share" element={<ShareResults />} />
+          <Route path="/community" element={<Community />} />
+          <Route path="/subscribe" element={<Subscribe />} />
           <Route path="/" element={<Collection />} />
           <Route path="/add-watch" element={<AddWatch />} />
           <Route path="/watch/:reference" element={<WatchDetail />} />
           <Route path="/drift-test" element={<DriftTest />} />
           <Route path="/discovery" element={<Discovery />} />
+          <Route path="/ask" element={<Ask />} />
           <Route path="/settings" element={<Settings />} />
         </Routes>
       </main>
 
-      {!isLogin && !isAddWatch && !isPrivacy && (
+      {!isLogin && !isAddWatch && !isPrivacy && !isShare && !isCommunity && !isSubscribe && (
         <nav className="nav-tabs">
           <Link to="/" className={location.pathname === '/' ? 'active' : ''}>Collection</Link>
           <Link to="/drift-test" className={location.pathname === '/drift-test' ? 'active' : ''}>Drift test</Link>
           <Link to="/discovery" className={location.pathname === '/discovery' ? 'active' : ''}>Discovery</Link>
+          <Link to="/ask" className={location.pathname === '/ask' ? 'active' : ''}>Ask</Link>
           <Link to="/settings" className={location.pathname === '/settings' ? 'active' : ''}>Settings</Link>
         </nav>
       )}

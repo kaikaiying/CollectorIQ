@@ -1,13 +1,24 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { getCollection } from '../App'
-import { getDriftReadings } from '../lib/driftStorage'
+import { getDriftReadings, deleteDriftReading, clearDriftReadings } from '../lib/driftStorage'
 import { getOfficialServiceUrl } from '../lib/serviceCenters'
 
 export default function WatchDetail() {
   const { reference } = useParams()
   const [watch, setWatch] = useState(null)
   const [readings, setReadings] = useState([])
+  const [clearConfirm, setClearConfirm] = useState(false)
+
+  const handleClearAll = () => {
+    if (!clearConfirm) {
+      setClearConfirm(true)
+      return
+    }
+    clearDriftReadings(reference)
+    setReadings([])
+    setClearConfirm(false)
+  }
 
   useEffect(() => {
     const list = getCollection()
@@ -37,7 +48,7 @@ export default function WatchDetail() {
 
   return (
     <>
-      <h1 className="page-title">{watch.model}</h1>
+      <h1 className="page-title watch-model-title">{watch.model}</h1>
       <p style={{ color: 'var(--text-secondary)', marginTop: '-0.5rem', marginBottom: '1rem' }}>
         {watch.brand} · Ref: {watch.reference}
         {watch.isCustom && <span style={{ marginLeft: 6, fontSize: 12, color: 'var(--text-tertiary)' }}>(custom)</span>}
@@ -45,7 +56,7 @@ export default function WatchDetail() {
 
       {(watch.movementType || watch.movementCalibre || watch.category || watch.notes) && (
         <div className="card" style={{ marginBottom: '1rem' }}>
-          <h3 style={{ marginTop: 0 }}>Details</h3>
+          <h3 className="section-title" style={{ marginTop: 0 }}>Details</h3>
           <dl style={{ margin: 0, display: 'grid', gap: '0.35rem 1rem', gridTemplateColumns: 'auto 1fr' }}>
             {(watch.movementType || watch.movementCalibre) && (
               <>
@@ -81,7 +92,7 @@ export default function WatchDetail() {
       )}
 
       <div className="card">
-        <h3 style={{ marginTop: 0 }}>Spec compliance</h3>
+        <h3 className="section-title" style={{ marginTop: 0 }}>Spec compliance</h3>
         <p style={{ fontSize: 15, color: 'var(--text-secondary)' }}>Manufacturer range: {min} to +{max} s/day</p>
         <div style={{ display: 'flex', gap: '1rem', marginTop: '0.5rem' }}>
           <span style={{ color: '#22c55e' }}>In spec: {inSpec}</span>
@@ -96,25 +107,55 @@ export default function WatchDetail() {
       )}
 
       <div className="card">
-        <h3 style={{ marginTop: 0 }}>Drift history</h3>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '0.5rem' }}>
+          <h3 className="section-title" style={{ margin: 0 }}>Drift history</h3>
+          {sorted.length > 0 && (
+            <button
+              type="button"
+              className={`btn btn-secondary ${clearConfirm ? '' : ''}`}
+              style={{ fontSize: 14, padding: '0.4rem 0.75rem' }}
+              onClick={handleClearAll}
+              onBlur={() => setTimeout(() => setClearConfirm(false), 200)}
+            >
+              {clearConfirm ? 'Tap again to clear all' : 'Corrected watch — reset'}
+            </button>
+          )}
+        </div>
         {sorted.length === 0 ? (
           <p style={{ color: 'var(--text-secondary)' }}>No readings yet. Run a drift test.</p>
         ) : (
+          <>
+          <p style={{ fontSize: 13, color: 'var(--text-tertiary)', margin: '0 0 0.75rem' }}>
+            Synced to atomic time or had a service? Use &quot;Corrected watch — reset&quot; to clear old readings and track from your new baseline.
+          </p>
           <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
             {sorted.slice(0, 20).map((r) => (
-              <li key={r.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '0.35rem 0', borderBottom: '1px solid var(--border)' }}>
-                <span style={{ fontSize: '0.9rem' }}>{r.timestamp.toLocaleDateString()} {r.timestamp.toLocaleTimeString()}</span>
-                <span style={{ color: r.driftInSeconds < min || r.driftInSeconds > max ? '#ef4444' : '#22c55e' }}>
+              <li key={r.id} className="drift-history-row">
+                <span className="drift-history-meta">{r.timestamp.toLocaleDateString()} {r.timestamp.toLocaleTimeString()}</span>
+                <span className="drift-history-value" style={{ color: r.driftInSeconds < min || r.driftInSeconds > max ? 'var(--danger)' : '#22c55e' }}>
                   {r.driftInSeconds >= 0 ? '+' : ''}{r.driftInSeconds.toFixed(1)} s
                 </span>
+                <button
+                  type="button"
+                  className="drift-history-delete"
+                  onClick={() => {
+                    deleteDriftReading(reference, r.id)
+                    setReadings(getDriftReadings(reference))
+                  }}
+                  aria-label="Delete this reading"
+                  title="Delete reading"
+                >
+                  Delete
+                </button>
               </li>
             ))}
           </ul>
+          </>
         )}
       </div>
 
       <div className="card">
-        <h3 style={{ marginTop: 0 }}>Service &amp; care</h3>
+        <h3 className="section-title" style={{ marginTop: 0 }}>Service &amp; care</h3>
         {serviceUrl ? (
           <>
             <p style={{ margin: '0 0 0.75rem', color: 'var(--text-secondary)', fontSize: 15 }}>

@@ -1,6 +1,11 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    // User subscription status (written by backend via Stripe webhook; user reads own)
+    match /users/{uid} {
+      allow read: if request.auth != null && request.auth.uid == uid;
+      allow write: if false;
+    }
     // Anonymous readings: any signed-in user can add; no one reads raw readings in the app
     match /readings/{id} {
       allow create: if request.auth != null;
@@ -11,6 +16,10 @@ service cloud.firestore {
       allow read: if true;
       allow create, update: if request.auth != null;
       allow delete: if false;
+    }
+    // AI usage: backend only (Admin SDK); clients have no access
+    match /aiUsage/{uid} {
+      allow read, write: if false;
     }
   }
 }

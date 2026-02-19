@@ -24,3 +24,15 @@ export function addDriftReading(reference, driftInSeconds, timestamp = new Date(
   saveDriftReadings(reference, list)
   return list
 }
+
+export function deleteDriftReading(reference, id) {
+  const list = getDriftReadings(reference).filter((r) => r.id !== id)
+  saveDriftReadings(reference, list)
+  return list
+}
+
+/** Clear all readings for a watch (e.g. after service/reset). */
+export function clearDriftReadings(reference) {
+  saveDriftReadings(reference, [])
+  return []
+}
