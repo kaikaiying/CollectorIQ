@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { getCollection, setCollection } from '../App'
 import PageSeo from '../components/PageSeo'
 import { useAuth } from '../contexts/AuthContext'
-import { getSubscriptionStatus, SUBSCRIPTION_PRICE_DISPLAY, TRIAL_DAYS } from '../lib/subscription'
+import { getSubscriptionStatus, SUBSCRIPTION_PRICE_DISPLAY } from '../lib/subscription'
 
 export default function Collection() {
   const { user } = useAuth()
@@ -73,7 +73,7 @@ export default function Collection() {
           {watches.length === 1 && !subLoading && !hasActiveSubscription && (
             <div className="card upgrade-teaser" style={{ marginTop: '0.5rem' }}>
               <p style={{ margin: 0, fontSize: 14, color: 'var(--text-secondary)' }}>
-                Want to track more watches? <strong style={{ color: 'var(--accent)' }}>{TRIAL_DAYS} days free</strong>, then {SUBSCRIPTION_PRICE_DISPLAY}.
+                Want to track more watches? {SUBSCRIPTION_PRICE_DISPLAY}
               </p>
             </div>
           )}

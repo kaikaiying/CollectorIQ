@@ -140,7 +140,7 @@ export default function PrivacyPolicy() {
 
       <Section title="Refunds" id="refunds">
         <P>You may request a refund for any subscription charge within 14 days of the charge date. To request a refund, contact us at support@collectoriq.app with the email address associated with your account and the date of the charge. We will process refund requests within 5 business days. Refunds are issued to the original payment method.</P>
-        <P>If you cancel during a free trial, you will not be charged. If you were charged before canceling, you may request a refund under the 14-day policy above.</P>
+        <P>If you cancel before your next billing date, you will not be charged again. You may request a refund under the 14-day policy above.</P>
       </Section>
 
       <Section title="Cancellations">

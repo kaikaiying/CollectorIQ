@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import PageSeo from '../components/PageSeo'
-import { SUBSCRIPTION_PRICE_DISPLAY, TRIAL_DAYS } from '../lib/subscription'
+import { SUBSCRIPTION_PRICE_DISPLAY } from '../lib/subscription'
 
 export default function Subscribe() {
   const { user } = useAuth()
@@ -10,7 +10,7 @@ export default function Subscribe() {
     <div className="app-main" style={{ paddingBottom: '2rem' }}>
       <PageSeo
         title="Subscribe"
-        description="First watch free. Add unlimited watches with a free trial, then 6.99 CAD/month. Cancel anytime."
+        description="First watch free. Add unlimited watches for 6.99 CAD/month. Cancel anytime."
       />
       <Link to={user ? '/' : '/login'} style={{ fontSize: 15, color: 'var(--accent)', marginBottom: '1rem', display: 'inline-block' }}>
         ← Back to {user ? 'app' : 'sign in'}
@@ -24,7 +24,7 @@ export default function Subscribe() {
       <div className="card paywall-card" style={{ marginBottom: '1rem' }}>
         <p className="paywall-title">Add more watches</p>
         <p className="paywall-desc">
-          <strong>{TRIAL_DAYS} days free</strong>, then {SUBSCRIPTION_PRICE_DISPLAY}. Cancel anytime.
+          {SUBSCRIPTION_PRICE_DISPLAY}. Cancel anytime.
         </p>
         <ul style={{ margin: '0.75rem 0', paddingLeft: '1.25rem', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
           <li>Unlimited watches in your collection</li>

@@ -31,4 +31,3 @@ export const FIRST_WATCH_FREE = 1
 export const SUBSCRIPTION_PRICE_MONTHLY = 6.99
 export const SUBSCRIPTION_CURRENCY = 'CAD'
 export const SUBSCRIPTION_PRICE_DISPLAY = '$6.99 CAD/mo'
-export const TRIAL_DAYS = 14

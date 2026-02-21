@@ -78,7 +78,7 @@ export default function Login() {
   const brandBlock = (
     <div className="login-brand">
       <div className="login-logo-wrap">
-        <img src="/logo.png" alt="Collector IQ" className="login-logo" />
+        <img src={`${import.meta.env.BASE_URL}logo.png`} alt="Collector IQ" className="login-logo" />
       </div>
       <h1 className="login-headline">Track your watch accuracy</h1>
       <p className="login-tagline">Why Collector IQ:</p>

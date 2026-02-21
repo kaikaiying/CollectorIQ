@@ -952,11 +952,6 @@ a:hover {
   font-weight: 600;
 }
 
-.discovery-tabs {
-  display: flex;
-  gap: 0.5rem;
-  margin-bottom: 0.5rem;
-}
 .discovery-view-desc {
   font-size: 14px;
   color: var(--text-secondary);
@@ -989,47 +984,79 @@ a:hover {
   box-shadow: 0 0 0 2px var(--accent-subtle);
 }
 
-.discovery-table-card {
-  overflow-x: auto;
-  padding: 0;
+.discovery-cards {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space);
+  margin-bottom: var(--space);
 }
 
-.discovery-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 14px;
-  min-width: 420px;
+.discovery-card {
+  padding: var(--space-lg);
 }
 
-.discovery-table th,
-.discovery-table td {
-  padding: 0.6rem 0.75rem;
-  text-align: left;
-  border-bottom: 1px solid var(--border);
+.discovery-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space);
+  margin-bottom: 0.35rem;
 }
 
-.discovery-table th {
-  font-size: 12px;
+.discovery-card-brand {
   font-weight: 600;
+  font-size: 1.05rem;
+  color: var(--text);
+}
+
+.discovery-card-model {
+  font-weight: 500;
+  font-size: 1.05rem;
+  color: var(--text);
+}
+
+.discovery-card-model::before {
+  content: ' · ';
+  color: var(--text-tertiary);
+  font-weight: 400;
+}
+
+.discovery-card-ref {
+  font-size: 13px;
   color: var(--text-secondary);
-  background: rgba(0, 0, 0, 0.25);
-  white-space: nowrap;
+  margin-bottom: 0.25rem;
 }
 
-.discovery-table tbody tr:hover {
-  background: rgba(255, 255, 255, 0.02);
+.discovery-card-spec {
+  font-size: 14px;
+  color: var(--text-tertiary);
+  margin-bottom: 0.35rem;
+  font-variant-numeric: tabular-nums;
 }
 
-.discovery-table td {
-  vertical-align: middle;
+.discovery-card-community {
+  font-size: 14px;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+.discovery-empty {
+  text-align: center;
+  padding: var(--space-xl);
+}
+
+.discovery-empty.card {
+  margin-bottom: 0;
 }
 
 .verdict {
   display: inline-block;
-  padding: 0.2rem 0.5rem;
+  padding: 0.25rem 0.55rem;
   border-radius: 6px;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .verdict--good {
@@ -1050,29 +1077,6 @@ a:hover {
 .verdict--none {
   background: rgba(255, 255, 255, 0.06);
   color: var(--text-tertiary);
-}
-
-@media (max-width: 480px) {
-  .discovery-table th { display: none; }
-  .discovery-table td {
-    display: block;
-    padding: 0.4rem 0.75rem;
-    border-bottom-width: 0;
-  }
-  .discovery-table td::before {
-    content: attr(data-label);
-    font-weight: 600;
-    color: var(--text-secondary);
-    display: block;
-    margin-bottom: 0.15rem;
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: 0.02em;
-  }
-  .discovery-table tr {
-    border-bottom: 1px solid var(--border);
-    padding: 0.5rem 0;
-  }
 }
 
 /* Share results page (public) */

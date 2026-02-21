@@ -1,0 +1,6 @@
+{
+  "appId": "app.collectoriq.ios",
+  "appName": "Collector IQ",
+  "webDir": "dist",
+  "server": {}
+}

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { fetchAggregates } from '../lib/driftCloud'
 import PageSeo from '../components/PageSeo'
 
@@ -14,18 +14,20 @@ function formatSpecRange(low, high) {
   return `${l} to +${h} s/day`
 }
 
-const MIN_READINGS_FOR_STATS = 3 // Don't show exact avg/pct below this to protect user privacy
+const MIN_READINGS_FOR_STATS = 3
 
 function matchesSearch(row, query) {
-  const q = query.trim().toLowerCase()
+  const q = String(query ?? '').trim().toLowerCase()
   if (!q) return true
+  const tokens = q.split(/\s+/).filter(Boolean)
   const brand = (row.brand ?? '').toLowerCase()
   const model = (row.model ?? '').toLowerCase()
-  const ref = (row.reference ?? '').toLowerCase()
-  return brand.includes(q) || model.includes(q) || ref.includes(q)
+  const reference = (row.reference ?? '').toLowerCase()
+  return tokens.every((token) =>
+    brand.includes(token) || model.includes(token) || reference.includes(token)
+  )
 }
 
-/** Whether we can safely show avg/pct without risk of identifying individuals */
 function canShowStats(count) {
   return count >= MIN_READINGS_FOR_STATS
 }
@@ -34,7 +36,6 @@ export default function Discovery() {
   const [specs, setSpecs] = useState([])
   const [aggregates, setAggregates] = useState([])
   const [loading, setLoading] = useState(true)
-  const [view, setView] = useState('accountability') // 'accountability' | 'strictest'
   const [search, setSearch] = useState('')
 
   useEffect(() => {
@@ -54,47 +55,53 @@ export default function Discovery() {
       })
   }, [])
 
-  const withRange = specs
-    .map((w) => ({
-      ...w,
-      low: parseSpec(w.spec_low),
-      high: parseSpec(w.spec_high),
-    }))
-    .filter((w) => w.low != null && w.high != null)
+  const withRange = useMemo(() =>
+    specs
+      .map((w) => ({
+        ...w,
+        low: parseSpec(w.spec_low),
+        high: parseSpec(w.spec_high),
+      }))
+      .filter((w) => w.low != null && w.high != null),
+    [specs]
+  )
 
-  const aggByRef = {}
-  aggregates.forEach((a) => {
-    aggByRef[a.reference] = a
-  })
+  const aggByRef = useMemo(() => {
+    const map = {}
+    aggregates.forEach((a) => { map[a.reference] = a })
+    return map
+  }, [aggregates])
 
-  const rows = withRange.map((w) => {
-    const agg = aggByRef[w.reference]
-    const count = agg?.readingCount ?? 0
-    const avg = count > 0 ? (agg.sumDrift / count) : null
-    const inSpecCount = agg?.inSpecCount ?? 0
-    const pctInSpec = count > 0 ? Math.round((inSpecCount / count) * 100) : null
-    const inSpec = avg != null && w.low != null && w.high != null && avg >= w.low && avg <= w.high
-    return {
-      brand: w.brand,
-      model: w.model,
-      reference: w.reference,
-      specLow: w.low,
-      specHigh: w.high,
-      readingCount: count,
-      avgDrift: avg,
-      pctInSpec,
-      inSpecCount,
-    }
-  })
+  const rows = useMemo(() =>
+    withRange.map((w) => {
+      const agg = aggByRef[w.reference]
+      const count = agg?.readingCount ?? 0
+      const avg = count > 0 ? (agg.sumDrift / count) : null
+      const inSpecCount = agg?.inSpecCount ?? 0
+      const pctInSpec = count > 0 ? Math.round((inSpecCount / count) * 100) : null
+      return {
+        brand: w.brand,
+        model: w.model,
+        reference: w.reference,
+        specLow: w.low,
+        specHigh: w.high,
+        readingCount: count,
+        avgDrift: avg,
+        pctInSpec,
+        inSpecCount,
+      }
+    }),
+    [withRange, aggByRef]
+  )
 
-  const withData = rows.filter((r) => r.readingCount > 0)
-  const sortedByAccountability = [...withData].sort((a, b) => (b.pctInSpec ?? 0) - (a.pctInSpec ?? 0))
-  const sortedByReadings = [...withData].sort((a, b) => b.readingCount - a.readingCount)
   const specWidth = (w) => (w.specHigh - w.specLow)
-  const byStrictness = [...withRange].sort((a, b) => specWidth(a) - specWidth(b))
 
-  const filteredAccountability = sortedByAccountability.filter((r) => matchesSearch(r, search))
-  const filteredStrictest = byStrictness.filter((w) => matchesSearch(w, search)).slice(0, 20)
+  const filtered = rows.filter((r) => matchesSearch(r, search))
+  const withD = filtered.filter((r) => r.readingCount > 0)
+  const withoutD = filtered.filter((r) => r.readingCount === 0)
+  const sortedWith = [...withD].sort((a, b) => (b.pctInSpec ?? 0) - (a.pctInSpec ?? 0))
+  const sortedWithout = [...withoutD].sort((a, b) => specWidth(a) - specWidth(b))
+  const displayRows = [...sortedWith, ...sortedWithout]
 
   const getVerdict = (row) => {
     if (row.readingCount === 0) return { label: 'No data yet', status: 'none' }
@@ -114,166 +121,74 @@ export default function Discovery() {
       <PageSeo title="Discovery" description="Community watch accuracy data vs manufacturer specs (s/day). See how Omega, Rolex, Seiko perform. Watch atomic tracker with real-world data." />
       <h1 className="page-title">Discovery</h1>
       <p style={{ color: 'var(--text-secondary)', marginBottom: 'var(--space)' }}>
-        Collective real-world accuracy vs manufacturer specs. See if brands deliver what they claim.
-      </p>
-      <p className="discovery-legend">
-        <strong>Claimed spec</strong> = manufacturer’s accuracy range (s/day). <strong>Community</strong> = aggregated readings only — no individual users shown. Stats (avg, % in spec) appear once enough readings exist for privacy.
-      </p>
-
-      {/* Tabs */}
-      <div className="discovery-tabs">
-        <button
-          type="button"
-          className={view === 'accountability' ? 'btn' : 'btn btn-secondary'}
-          style={{ flex: 1 }}
-          onClick={() => setView('accountability')}
-        >
-          By accountability
-        </button>
-        <button
-          type="button"
-          className={view === 'strictest' ? 'btn' : 'btn btn-secondary'}
-          style={{ flex: 1 }}
-          onClick={() => setView('strictest')}
-        >
-          Strictest specs
-        </button>
-      </div>
-      <p className="discovery-view-desc">
-        {view === 'accountability'
-          ? 'Sorted by % of readings within claimed spec (best performers first). Which brands actually deliver?'
-          : 'Sorted by tightest claimed accuracy range (e.g. ±1 s/day). Boldest claims — do community readings back them up?'}
+        Community accuracy vs manufacturer specs. Which brands deliver?
       </p>
 
       <div className="discovery-search-wrap">
         <input
-          type="search"
-          placeholder="Search by brand, model, or reference…"
+          type="text"
+          placeholder="Search brand, model, or reference (e.g. Omega Speedmaster)"
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          onChange={(e) => {
+            const v = e.target.value
+            setSearch(v)
+          }}
+          autoComplete="off"
+          autoCorrect="off"
+          autoCapitalize="off"
+          spellCheck={false}
           className="discovery-search-input"
           aria-label="Search watches"
         />
       </div>
 
-      {view === 'accountability' && (
-        <div className="card discovery-table-card">
-          <table className="discovery-table">
-            <thead>
-              <tr>
-                <th>Brand</th>
-                <th>Model</th>
-                <th>Ref</th>
-                <th>Claimed spec</th>
-                <th>Community readings</th>
-                <th>Verdict</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredAccountability.length === 0 ? (
-                <tr>
-                  <td colSpan={6} style={{ color: 'var(--text-secondary)', padding: 'var(--space-lg)', textAlign: 'center' }}>
-                    {search.trim() ? 'No matches for your search. Try a different term.' : 'No community data yet. Run drift tests and your readings will show here.'}
-                  </td>
-                </tr>
-              ) : (
-                filteredAccountability.map((row) => {
-                  const verdict = getVerdict(row)
-                  return (
-                    <tr key={row.reference}>
-                      <td data-label="Brand">{row.brand}</td>
-                      <td data-label="Model">{row.model}</td>
-                      <td data-label="Ref">{row.reference}</td>
-                      <td data-label="Claimed spec">{formatSpecRange(row.specLow, row.specHigh)}</td>
-                      <td data-label="Community readings">
-                        {row.readingCount} reading{row.readingCount !== 1 ? 's' : ''}
-                        {canShowStats(row.readingCount) && row.avgDrift != null && (
-                          <> · {row.avgDrift >= 0 ? '+' : ''}{row.avgDrift.toFixed(1)} s/day avg</>
-                        )}
-                        {canShowStats(row.readingCount) && row.pctInSpec != null && <> · {row.pctInSpec}% in spec</>}
-                        {!canShowStats(row.readingCount) && row.readingCount > 0 && (
-                          <> · Limited (privacy)</>
-                        )}
-                      </td>
-                      <td data-label="Verdict">
-                        <span className={`verdict verdict--${verdict.status}`}>{verdict.label}</span>
-                      </td>
-                    </tr>
-                  )
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      {view === 'strictest' && (
-        <div className="card discovery-table-card">
-          <table className="discovery-table">
-            <thead>
-              <tr>
-                <th>Brand</th>
-                <th>Model</th>
-                <th>Ref</th>
-                <th>Claimed spec</th>
-                <th>Community readings</th>
-                <th>Verdict</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredStrictest.length === 0 ? (
-                <tr>
-                  <td colSpan={6} style={{ color: 'var(--text-secondary)', padding: 'var(--space-lg)', textAlign: 'center' }}>
-                    {search.trim() ? 'No matches for your search. Try a different term.' : 'No watch specs available.'}
-                  </td>
-                </tr>
-              ) : (
-              filteredStrictest.map((w) => {
-                const row = rows.find((r) => r.reference === w.reference) ?? {
-                  brand: w.brand,
-                  model: w.model,
-                  reference: w.reference,
-                  specLow: w.low,
-                  specHigh: w.high,
-                  readingCount: 0,
-                  avgDrift: null,
-                  pctInSpec: null,
-                  inSpecCount: 0,
-                }
-                const verdict = getVerdict(row)
-                return (
-                  <tr key={w.reference}>
-                    <td data-label="Brand">{row.brand}</td>
-                    <td data-label="Model">{row.model}</td>
-                    <td data-label="Ref">{row.reference}</td>
-                    <td data-label="Claimed spec">{formatSpecRange(row.specLow, row.specHigh)}</td>
-                    <td data-label="Community readings">
-                      {row.readingCount > 0 ? (
-                        <>
-                          {row.readingCount} readings
-                          {canShowStats(row.readingCount) && row.avgDrift != null && (
-                            <> · {row.avgDrift >= 0 ? '+' : ''}{row.avgDrift.toFixed(1)} s/day · {row.pctInSpec}% in spec</>
-                          )}
-                          {!canShowStats(row.readingCount) && <> · Limited (privacy)</>}
-                        </>
-                      ) : (
-                        '—'
+      <div className="discovery-cards" key={search}>
+        {displayRows.length === 0 ? (
+          <div className="card discovery-empty">
+            <p style={{ margin: 0, color: 'var(--text-secondary)', textAlign: 'center' }}>
+              {search.trim() ? 'No matches. Try "Rolex", "Omega", "Seiko", or a reference like "126610LN".' : 'No watch specs available yet.'}
+            </p>
+          </div>
+        ) : (
+          displayRows.map((row, i) => {
+            const verdict = getVerdict(row)
+            return (
+              <div key={`${row.brand}-${row.model}-${row.reference}-${i}`} className="card discovery-card">
+                <div className="discovery-card-header">
+                  <div>
+                    <span className="discovery-card-brand">{row.brand}</span>
+                    <span className="discovery-card-model">{row.model}</span>
+                  </div>
+                  <span className={`verdict verdict--${verdict.status}`}>{verdict.label}</span>
+                </div>
+                <div className="discovery-card-ref">Ref: {row.reference}</div>
+                <div className="discovery-card-spec">
+                  Spec: {formatSpecRange(row.specLow, row.specHigh)}
+                </div>
+                <div className="discovery-card-community">
+                  {row.readingCount === 0 ? (
+                    'No community readings yet'
+                  ) : (
+                    <>
+                      {row.readingCount} reading{row.readingCount !== 1 ? 's' : ''}
+                      {canShowStats(row.readingCount) && row.avgDrift != null && (
+                        <> · {row.avgDrift >= 0 ? '+' : ''}{row.avgDrift.toFixed(1)} s/day avg</>
                       )}
-                    </td>
-                    <td data-label="Verdict">
-                      <span className={`verdict verdict--${verdict.status}`}>{verdict.label}</span>
-                    </td>
-                  </tr>
-                )
-              })
-              )}
-            </tbody>
-          </table>
-        </div>
-      )}
+                      {canShowStats(row.readingCount) && row.pctInSpec != null && (
+                        <> · {row.pctInSpec}% in spec</>
+                      )}
+                      {!canShowStats(row.readingCount) && <> · Limited (privacy)</>}
+                    </>
+                  )}
+                </div>
+              </div>
+            )
+          })
+        )}
+      </div>
 
       <p style={{ fontSize: 13, color: 'var(--text-tertiary)', marginTop: 'var(--space)' }}>
-        Community data is aggregated only — individual users and readings are never shown. More readings = more reliable verdict.
+        Community data is aggregated only. More readings = more reliable. Run drift tests to contribute.
       </p>
     </>
   )

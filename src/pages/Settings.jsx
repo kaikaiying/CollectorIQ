@@ -72,7 +72,7 @@ export default function Settings() {
               ? 'Payment is past due. Update your payment method to keep your subscription.'
               : subStatus === 'canceled' || subStatus === 'unpaid'
                 ? 'Your subscription has ended. Resubscribe to add more watches.'
-                : 'First watch is free. Add more watches with a subscription (includes a free trial).'}
+                : 'First watch is free. Add more watches with a subscription.'}
         </p>
         {(subStatus === 'active' || subStatus === 'trialing' || subStatus === 'past_due') && (
           <button type="button" className="btn" style={{ width: '100%', marginTop: '0.75rem' }} onClick={openPortal} disabled={portalLoading}>

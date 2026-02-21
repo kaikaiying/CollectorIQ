@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getCollection, setCollection } from '../App'
 import { useAuth } from '../contexts/AuthContext'
-import { getSubscriptionStatus, FIRST_WATCH_FREE, SUBSCRIPTION_PRICE_DISPLAY, TRIAL_DAYS } from '../lib/subscription'
+import { getSubscriptionStatus, FIRST_WATCH_FREE, SUBSCRIPTION_PRICE_DISPLAY } from '../lib/subscription'
 import {
   MOVEMENT_TYPES,
   CATEGORIES,
@@ -190,7 +190,7 @@ export default function AddWatch() {
         <div className="card paywall-card">
           <p className="paywall-title">Add more watches</p>
           <p className="paywall-desc">
-            Your first watch is free. Add unlimited watches with <strong>{TRIAL_DAYS} days free</strong>, then {SUBSCRIPTION_PRICE_DISPLAY}.
+            Your first watch is free. Add unlimited watches for {SUBSCRIPTION_PRICE_DISPLAY}.
           </p>
           <div className="paywall-buttons">
             <button

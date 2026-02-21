@@ -1,7 +1,8 @@
 import { initializeApp } from 'firebase/app'
-import { getAuth } from 'firebase/auth'
+import { getAuth, initializeAuth, indexedDBLocalPersistence } from 'firebase/auth'
 import { getAnalytics } from 'firebase/analytics'
 import { getFirestore } from 'firebase/firestore'
+import { Capacitor } from '@capacitor/core'
 
 const config = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -22,7 +23,11 @@ let db = null
 
 if (hasConfig) {
   app = initializeApp(config)
-  auth = getAuth(app)
+  if (Capacitor.isNativePlatform()) {
+    auth = initializeAuth(app, { persistence: indexedDBLocalPersistence })
+  } else {
+    auth = getAuth(app)
+  }
   db = getFirestore(app)
   if (typeof window !== 'undefined' && config.measurementId) {
     analytics = getAnalytics(app)

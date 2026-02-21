@@ -42,7 +42,7 @@ function AppContent() {
     return (
       <div className="app-layout" style={{ alignItems: 'center', justifyContent: 'center', padding: '2rem' }}>
         <div className="login-logo-wrap" style={{ width: 80, height: 80, marginBottom: '1rem' }}>
-        <img src="/logo.png" alt="" className="login-logo" />
+        <img src={`${import.meta.env.BASE_URL}logo.png`} alt="" className="login-logo" />
       </div>
         <p style={{ color: 'var(--text-secondary)', fontSize: 15 }}>Loading…</p>
       </div>
@@ -77,7 +77,6 @@ function AppContent() {
           <Link to="/" className={location.pathname === '/' ? 'active' : ''}>Collection</Link>
           <Link to="/drift-test" className={location.pathname === '/drift-test' ? 'active' : ''}>Drift test</Link>
           <Link to="/discovery" className={location.pathname === '/discovery' ? 'active' : ''}>Discovery</Link>
-          <Link to="/ask" className={location.pathname === '/ask' ? 'active' : ''}>Ask</Link>
           <Link to="/settings" className={location.pathname === '/settings' ? 'active' : ''}>Settings</Link>
         </nav>
       )}
