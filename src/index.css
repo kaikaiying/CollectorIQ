@@ -29,8 +29,13 @@
   --font-body: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
-body {
+html, body {
+  height: 100%;
+  overflow: hidden;
   margin: 0;
+}
+
+body {
   font-family: var(--font-body);
   font-size: 17px;
   font-weight: 400;
@@ -40,12 +45,12 @@ body {
   background: linear-gradient(145deg, #0a0a0c 0%, #12121a 40%, #0d0d12 100%);
   background-attachment: fixed;
   color: var(--text);
-  min-height: 100vh;
   letter-spacing: 0.01em;
 }
 
 #root {
-  min-height: 100vh;
+  height: 100%;
+  overflow: hidden;
 }
 
 a {
@@ -57,36 +62,45 @@ a:hover {
   text-decoration: underline;
 }
 
-/* Layout */
+/* Layout – scroll contained in main; tab bar always visible at bottom */
 .app-layout {
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
+  height: 100%;
+  overflow: hidden;
 }
 
 .app-main {
   flex: 1;
-  padding: var(--space-lg) var(--space) 5.5rem;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  padding: max(var(--space-lg), env(safe-area-inset-top)) max(var(--space), env(safe-area-inset-right)) max(var(--space-lg), env(safe-area-inset-bottom)) max(var(--space), env(safe-area-inset-left));
   max-width: 480px;
   margin: 0 auto;
   width: 100%;
 }
 
-/* Bottom nav – glassmorphic, pill-style */
+.app-layout--with-nav .app-main {
+  padding-bottom: calc(72px + max(0.75rem, env(safe-area-inset-bottom)));
+}
+
+/* Bottom nav – part of layout, never scrolls away */
 .nav-tabs {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  display: flex;
-  justify-content: space-around;
-  align-items: stretch;
-  min-height: 64px;
-  padding: 0.5rem 0.5rem max(0.5rem, env(safe-area-inset-bottom));
-  background: rgba(18, 18, 22, 0.65);
-  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+  touch-action: manipulation;
+  width: 100%;
   max-width: 480px;
   margin: 0 auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: stretch;
+  gap: 0.5rem;
+  min-height: 72px;
+  padding: 0.75rem max(1rem, env(safe-area-inset-right)) max(0.75rem, env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left));
+  background: rgba(18, 18, 22, 0.95);
+  border-top: 1px solid var(--border);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
 }
@@ -96,10 +110,11 @@ a:hover {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 0.25rem;
-  padding: 0.5rem 0.65rem;
-  min-width: 76px;
-  font-size: 12px;
+  gap: 0.35rem;
+  padding: 0.5rem 0.5rem;
+  flex: 1;
+  min-width: 0;
+  font-size: 11px;
   font-weight: 500;
   color: var(--text-secondary);
   text-decoration: none;
@@ -135,7 +150,9 @@ a:hover {
   font-size: 1.75rem;
   font-weight: 600;
   letter-spacing: 0.02em;
-  margin: 0 0 var(--space);
+  margin: 0 0 var(--space-lg);
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
   color: var(--text);
   line-height: 1.25;
 }

@@ -56,12 +56,6 @@ module.exports = async (req, res) => {
     const priceId = process.env.STRIPE_PRICE_ID
     if (!priceId) return res.status(500).json({ error: 'STRIPE_PRICE_ID not set' })
 
-    const trialDays = parseInt(process.env.STRIPE_TRIAL_DAYS || '14', 10)
-    const subscriptionData = {
-      metadata: { uid },
-    }
-    if (trialDays > 0) subscriptionData.trial_period_days = trialDays
-
     const session = await stripe.checkout.sessions.create({
       mode: 'subscription',
       payment_method_types: ['card'],
@@ -70,7 +64,7 @@ module.exports = async (req, res) => {
       cancel_url: cancelUrl,
       client_reference_id: uid,
       customer_email: email,
-      subscription_data: subscriptionData,
+      subscription_data: { metadata: { uid } },
     })
 
     return res.status(200).json({ url: session.url })

@@ -1,6 +1,11 @@
 {
-  "appId": "app.collectoriq.ios",
+  "appId": "app.collectoriq",
   "appName": "Collector IQ",
   "webDir": "dist",
-  "server": {}
+  "server": {},
+  "plugins": {
+    "FirebaseAuthentication": {
+      "providers": ["apple.com", "google.com"]
+    }
+  }
 }

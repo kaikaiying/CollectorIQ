@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { getCollection, setCollection } from '../App'
+import { getCollection, setCollection, SYNC_COMPLETE_EVENT } from '../App'
 import PageSeo from '../components/PageSeo'
 import { useAuth } from '../contexts/AuthContext'
 import { getSubscriptionStatus, SUBSCRIPTION_PRICE_DISPLAY } from '../lib/subscription'
@@ -13,6 +13,9 @@ export default function Collection() {
 
   useEffect(() => {
     setWatches(getCollection())
+    const onSync = () => setWatches(getCollection())
+    window.addEventListener(SYNC_COMPLETE_EVENT, onSync)
+    return () => window.removeEventListener(SYNC_COMPLETE_EVENT, onSync)
   }, [])
 
   useEffect(() => {
@@ -73,7 +76,7 @@ export default function Collection() {
           {watches.length === 1 && !subLoading && !hasActiveSubscription && (
             <div className="card upgrade-teaser" style={{ marginTop: '0.5rem' }}>
               <p style={{ margin: 0, fontSize: 14, color: 'var(--text-secondary)' }}>
-                Want to track more watches? {SUBSCRIPTION_PRICE_DISPLAY}
+                First watch free. Add more for {SUBSCRIPTION_PRICE_DISPLAY}. Renews until cancelled.
               </p>
             </div>
           )}

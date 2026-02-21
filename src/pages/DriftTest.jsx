@@ -2,9 +2,10 @@ const MIN_READINGS_FOR_COMMUNITY_STATS = 3 // Don't show exact mean below this t
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { getCollection } from '../App'
+import { getCollection, SYNC_COMPLETE_EVENT } from '../App'
 import PageSeo from '../components/PageSeo'
 import { getDriftReadings, addDriftReading } from '../lib/driftStorage'
+import { pushReadingsToCloud } from '../lib/userDataSync'
 import { uploadDriftReading, fetchAggregates } from '../lib/driftCloud'
 import { fetchAtomicTimeOrDevice } from '../lib/atomicTime'
 import { formatLocalTime, getTimezoneLabel } from '../lib/timezone'
@@ -139,6 +140,9 @@ export default function DriftTest() {
 
   useEffect(() => {
     if (selectedRef) setReadings(getDriftReadings(selectedRef))
+    const onSync = () => { if (selectedRef) setReadings(getDriftReadings(selectedRef)) }
+    window.addEventListener(SYNC_COMPLETE_EVENT, onSync)
+    return () => window.removeEventListener(SYNC_COMPLETE_EVENT, onSync)
   }, [selectedRef])
 
   useEffect(() => {
@@ -200,6 +204,15 @@ export default function DriftTest() {
       ? refFromUrl
       : list[0].reference
     setSelectedRef(refToSelect)
+    const onSync = () => {
+      const next = getCollection()
+      setWatches(next)
+      if (next.length > 0) {
+        setSelectedRef((prev) => (next.some((w) => w.reference === prev) ? prev : next[0].reference))
+      }
+    }
+    window.addEventListener(SYNC_COMPLETE_EVENT, onSync)
+    return () => window.removeEventListener(SYNC_COMPLETE_EVENT, onSync)
   }, [refFromUrl])
 
   useEffect(() => {
@@ -291,7 +304,9 @@ export default function DriftTest() {
       const { date: atomicAtTap, fromServer } = await fetchAtomicTimeOrDevice()
       const driftSeconds = (atomicAtTap - targetTime) / 1000
       addDriftReading(selectedWatch.reference, driftSeconds, atomicAtTap)
-      setReadings(getDriftReadings(selectedWatch.reference))
+      const updated = getDriftReadings(selectedWatch.reference)
+      setReadings(updated)
+      pushReadingsToCloud(selectedWatch.reference, updated).catch(() => {})
       uploadDriftReading(
         {
           reference: selectedWatch.reference,

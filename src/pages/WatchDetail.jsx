@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { getCollection } from '../App'
+import { getCollection, SYNC_COMPLETE_EVENT } from '../App'
 import { getDriftReadings, deleteDriftReading, clearDriftReadings } from '../lib/driftStorage'
+import { pushReadingsToCloud } from '../lib/userDataSync'
 import { getOfficialServiceUrl } from '../lib/serviceCenters'
 
 export default function WatchDetail() {
@@ -17,14 +18,20 @@ export default function WatchDetail() {
     }
     clearDriftReadings(reference)
     setReadings([])
+    pushReadingsToCloud(reference, []).catch(() => {})
     setClearConfirm(false)
   }
 
   useEffect(() => {
-    const list = getCollection()
-    const w = list.find((x) => x.reference === reference)
-    setWatch(w || null)
-    if (reference) setReadings(getDriftReadings(reference))
+    const refresh = () => {
+      const list = getCollection()
+      const w = list.find((x) => x.reference === reference)
+      setWatch(w || null)
+      if (reference) setReadings(getDriftReadings(reference))
+    }
+    refresh()
+    window.addEventListener(SYNC_COMPLETE_EVENT, refresh)
+    return () => window.removeEventListener(SYNC_COMPLETE_EVENT, refresh)
   }, [reference])
 
   if (!watch) {
@@ -140,7 +147,9 @@ export default function WatchDetail() {
                   className="drift-history-delete"
                   onClick={() => {
                     deleteDriftReading(reference, r.id)
-                    setReadings(getDriftReadings(reference))
+                    const updated = getDriftReadings(reference)
+                    setReadings(updated)
+                    pushReadingsToCloud(reference, updated).catch(() => {})
                   }}
                   aria-label="Delete this reading"
                   title="Delete reading"

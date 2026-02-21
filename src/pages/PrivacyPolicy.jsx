@@ -144,9 +144,10 @@ export default function PrivacyPolicy() {
       </Section>
 
       <Section title="Cancellations">
-        <P>You can cancel your subscription at any time. To cancel:</P>
+        <P>Subscriptions automatically renew until cancelled. You can cancel your subscription at any time. To cancel:</P>
         <List items={[
-          'Go to Settings → Manage subscription (opens our secure billing portal), or',
+          'iOS: Settings → [Your Name] → Subscriptions → Collector IQ → Cancel.',
+          'Web: Settings → Manage subscription (opens our billing portal), or',
           'Email us at support@collectoriq.app and we will cancel for you.',
         ]} />
         <P>After canceling, you will keep access until the end of your current billing period. When your subscription ends, you will still have access to your first watch and all its data; adding additional watches will require a new subscription.</P>

@@ -4,12 +4,15 @@ import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   signInWithPopup,
+  signInWithCredential,
   sendPasswordResetEmail,
   signOut as firebaseSignOut,
   updateProfile,
   GoogleAuthProvider,
   OAuthProvider,
 } from 'firebase/auth'
+import { Capacitor } from '@capacitor/core'
+import { FirebaseAuthentication } from '@capacitor-firebase/authentication'
 import { auth } from '../firebase'
 
 const AuthContext = createContext(null)
@@ -51,17 +54,53 @@ export function AuthProvider({ children }) {
 
   const signInWithGoogle = async () => {
     if (!auth) return
-    await signInWithPopup(auth, new GoogleAuthProvider())
+    if (Capacitor.isNativePlatform()) {
+      const result = await FirebaseAuthentication.signInWithGoogle()
+      const credential = GoogleAuthProvider.credential(result.credential?.idToken)
+      await signInWithCredential(auth, credential)
+    } else {
+      await signInWithPopup(auth, new GoogleAuthProvider())
+    }
   }
 
   const signInWithApple = async () => {
     if (!auth) return
-    const provider = new OAuthProvider('apple.com')
-    await signInWithPopup(auth, provider)
+    if (Capacitor.isNativePlatform()) {
+      try {
+        const result = await FirebaseAuthentication.signInWithApple({ skipNativeAuth: true })
+        const idToken = result.credential?.idToken
+        const nonce = result.credential?.nonce
+        if (!idToken) {
+          throw new Error(result?.credential ? 'Apple sign-in was cancelled.' : 'Apple sign-in failed. Enable Sign in with Apple in Xcode (Signing & Capabilities) and configure the Apple provider in Firebase Console.')
+        }
+        const provider = new OAuthProvider('apple.com')
+        const credential = provider.credential({
+          idToken,
+          rawNonce: nonce ?? undefined,
+        })
+        await signInWithCredential(auth, credential)
+      } catch (err) {
+        const msg = err?.message || String(err)
+        const code = err?.code ?? ''
+        if (msg.includes('1001') || msg.includes('cancelled') || code === '1001') {
+          throw new Error('Sign in was cancelled.')
+        }
+        if (msg.includes('operation') && msg.toLowerCase().includes('completed')) {
+          throw new Error('Apple Sign In failed. Add "Sign in with Apple" capability in Xcode (Signing & Capabilities) and enable it for your App ID in Apple Developer.')
+        }
+        throw err
+      }
+    } else {
+      const provider = new OAuthProvider('apple.com')
+      await signInWithPopup(auth, provider)
+    }
   }
 
   const signOut = async () => {
     if (!auth) return
+    if (Capacitor.isNativePlatform()) {
+      await FirebaseAuthentication.signOut()
+    }
     await firebaseSignOut(auth)
   }
 

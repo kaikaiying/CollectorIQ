@@ -2,7 +2,8 @@ import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getCollection, setCollection } from '../App'
 import { useAuth } from '../contexts/AuthContext'
-import { getSubscriptionStatus, FIRST_WATCH_FREE, SUBSCRIPTION_PRICE_DISPLAY } from '../lib/subscription'
+import { getSubscriptionStatus, FIRST_WATCH_FREE, SUBSCRIPTION_PRICE_DISPLAY, SUBSCRIPTION_TERMS_IAP, SUBSCRIPTION_TERMS_STRIPE } from '../lib/subscription'
+import { isIAPPlatform, purchaseSubscription, restorePurchases, getSubscriptionProduct } from '../lib/purchases'
 import {
   MOVEMENT_TYPES,
   CATEGORIES,
@@ -33,6 +34,8 @@ export default function AddWatch() {
   const [subLoading, setSubLoading] = useState(true)
   const [hasActiveSubscription, setHasActiveSubscription] = useState(false)
   const [checkoutLoading, setCheckoutLoading] = useState(false)
+  const [restoreLoading, setRestoreLoading] = useState(false)
+  const [iapPrice, setIapPrice] = useState(null)
   const navigate = useNavigate()
   const collectionLength = getCollection().length
   const needsSubscription = collectionLength >= FIRST_WATCH_FREE
@@ -53,30 +56,65 @@ export default function AddWatch() {
     return () => { cancelled = true }
   }, [user?.uid, needsSubscription])
 
+  useEffect(() => {
+    if (!isIAPPlatform() || !needsSubscription) return
+    let cancelled = false
+    getSubscriptionProduct().then((product) => {
+      if (!cancelled && product?.priceString) setIapPrice(product.priceString)
+    })
+    return () => { cancelled = true }
+  }, [needsSubscription])
+
   const startCheckout = useCallback(async (plan = 'monthly') => {
     if (!user || checkoutLoading) return
     setCheckoutLoading(true)
     try {
-      const token = await user.getIdToken()
-      const base = getApiBase()
-      const res = await fetch(`${base}/api/create-checkout-session`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({
-          successUrl: window.location.origin + '/?subscription=success',
-          cancelUrl: window.location.origin + '/add-watch',
-          plan,
-        }),
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Checkout failed')
-      if (data.url) window.location.href = data.url
-      else throw new Error('No checkout URL')
+      if (isIAPPlatform()) {
+        const ok = await purchaseSubscription()
+        if (ok) setHasActiveSubscription(true)
+      } else {
+        const token = await user.getIdToken()
+        const base = getApiBase()
+        const res = await fetch(`${base}/api/create-checkout-session`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({
+            successUrl: window.location.origin + '/?subscription=success',
+            cancelUrl: window.location.origin + '/add-watch',
+            plan,
+          }),
+        })
+        const data = await res.json()
+        if (!res.ok) throw new Error(data.error || 'Checkout failed')
+        if (data.url) window.location.href = data.url
+        else throw new Error('No checkout URL')
+      }
     } catch (e) {
+      if (e?.message && !String(e.message).toLowerCase().includes('cancel')) {
+        const msg = e.message || ''
+        const isPatternError = msg.toLowerCase().includes('string') && msg.toLowerCase().includes('pattern')
+        alert(isPatternError
+          ? 'Subscription not ready yet. Make sure the product is set up in App Store Connect (see docs/APPLE_IAP_SETUP.md). It can take 15–30 min to appear.'
+          : (msg || 'Something went wrong. Try again.'))
+      }
+    } finally {
       setCheckoutLoading(false)
-      alert(e.message || 'Something went wrong. Try again.')
     }
   }, [user, checkoutLoading])
+
+  const handleRestore = useCallback(async () => {
+    if (restoreLoading) return
+    setRestoreLoading(true)
+    try {
+      const ok = await restorePurchases()
+      if (ok) setHasActiveSubscription(true)
+      else alert('No previous purchases found.')
+    } catch (e) {
+      alert(e.message || 'Restore failed.')
+    } finally {
+      setRestoreLoading(false)
+    }
+  }, [restoreLoading])
 
   // Custom form state
   const [customBrand, setCustomBrand] = useState('')
@@ -184,13 +222,14 @@ export default function AddWatch() {
   }
 
   if (needsSubscription && !hasActiveSubscription) {
+    const useIAP = isIAPPlatform()
     return (
       <>
         <h1 className="page-title">Add watch</h1>
         <div className="card paywall-card">
           <p className="paywall-title">Add more watches</p>
           <p className="paywall-desc">
-            Your first watch is free. Add unlimited watches for {SUBSCRIPTION_PRICE_DISPLAY}.
+            First watch is free. Add unlimited watches for {useIAP ? (iapPrice ? `${iapPrice}/month` : 'a monthly subscription') : SUBSCRIPTION_PRICE_DISPLAY}.
           </p>
           <div className="paywall-buttons">
             <button
@@ -200,10 +239,23 @@ export default function AddWatch() {
               onClick={() => startCheckout('monthly')}
               disabled={checkoutLoading}
             >
-              {checkoutLoading ? 'Opening…' : `Subscribe — ${SUBSCRIPTION_PRICE_DISPLAY}`}
+              {checkoutLoading ? '…' : useIAP ? (iapPrice ? `Subscribe — ${iapPrice}/month` : 'Subscribe') : `Subscribe — ${SUBSCRIPTION_PRICE_DISPLAY}`}
             </button>
+            {useIAP && (
+              <button
+                type="button"
+                className="btn btn-secondary"
+                style={{ width: '100%' }}
+                onClick={handleRestore}
+                disabled={restoreLoading}
+              >
+                {restoreLoading ? '…' : 'Restore Purchases'}
+              </button>
+            )}
           </div>
-          <p className="paywall-hint">You can cancel anytime. Payment is handled securely by Stripe.</p>
+          <p className="paywall-hint" style={{ fontSize: 12 }}>
+            {useIAP ? SUBSCRIPTION_TERMS_IAP : SUBSCRIPTION_TERMS_STRIPE}
+          </p>
         </div>
         <button type="button" className="btn btn-secondary" style={{ width: '100%', marginTop: '0.5rem' }} onClick={() => navigate('/')}>
           Back to collection

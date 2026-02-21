@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { fetchAggregates } from '../lib/driftCloud'
 import PageSeo from '../components/PageSeo'
 
@@ -32,28 +32,51 @@ function canShowStats(count) {
   return count >= MIN_READINGS_FOR_STATS
 }
 
+function loadData() {
+  return Promise.all([
+    fetch('/watchspecs.json').then((r) => (r.ok ? r.json() : [])).catch(() => []),
+    fetchAggregates().catch(() => []),
+  ])
+}
+
 export default function Discovery() {
   const [specs, setSpecs] = useState([])
   const [aggregates, setAggregates] = useState([])
   const [loading, setLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
   const [search, setSearch] = useState('')
 
-  useEffect(() => {
-    Promise.all([
-      fetch('/watchspecs.json').then((r) => (r.ok ? r.json() : [])).catch(() => []),
-      fetchAggregates().catch(() => []),
-    ])
+  const fetchData = useCallback((showRefreshing = false) => {
+    if (showRefreshing) setRefreshing(true)
+    loadData()
       .then(([data, aggs]) => {
         setSpecs(Array.isArray(data) ? data : [])
         setAggregates(Array.isArray(aggs) ? aggs : [])
-        setLoading(false)
       })
-      .catch(() => {
-        setSpecs([])
-        setAggregates([])
+      .catch(() => {})
+      .finally(() => {
         setLoading(false)
+        setRefreshing(false)
       })
   }, [])
+
+  useEffect(() => {
+    fetchData()
+  }, [fetchData])
+
+  // Refetch when user returns to tab (e.g. after adding readings elsewhere)
+  useEffect(() => {
+    const onFocus = () => fetchData(true)
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') fetchData(true)
+    }
+    window.addEventListener('focus', onFocus)
+    document.addEventListener('visibilitychange', onVisibility)
+    return () => {
+      window.removeEventListener('focus', onFocus)
+      document.removeEventListener('visibilitychange', onVisibility)
+    }
+  }, [fetchData])
 
   const withRange = useMemo(() =>
     specs
@@ -66,13 +89,16 @@ export default function Discovery() {
     [specs]
   )
 
+  const specRefs = useMemo(() => new Set(withRange.map((w) => w.reference)), [withRange])
+
   const aggByRef = useMemo(() => {
     const map = {}
     aggregates.forEach((a) => { map[a.reference] = a })
     return map
   }, [aggregates])
 
-  const rows = useMemo(() =>
+  // Rows from specs (with or without community data)
+  const rowsFromSpecs = useMemo(() =>
     withRange.map((w) => {
       const agg = aggByRef[w.reference]
       const count = agg?.readingCount ?? 0
@@ -93,6 +119,31 @@ export default function Discovery() {
     }),
     [withRange, aggByRef]
   )
+
+  // Rows from aggregates only (user-added watches with community readings, not in static specs)
+  const rowsFromAggregatesOnly = useMemo(() =>
+    aggregates
+      .filter((a) => !specRefs.has(a.reference) && (a.readingCount ?? 0) > 0)
+      .map((a) => {
+        const count = a.readingCount ?? 0
+        const avg = count > 0 ? a.sumDrift / count : null
+        const pctInSpec = count > 0 ? Math.round(((a.inSpecCount ?? 0) / count) * 100) : null
+        return {
+          brand: a.brand ?? '',
+          model: a.model ?? '',
+          reference: a.reference ?? '',
+          specLow: a.specLow ?? -999,
+          specHigh: a.specHigh ?? 999,
+          readingCount: count,
+          avgDrift: avg,
+          pctInSpec,
+          inSpecCount: a.inSpecCount ?? 0,
+        }
+      }),
+    [aggregates, specRefs]
+  )
+
+  const rows = useMemo(() => [...rowsFromSpecs, ...rowsFromAggregatesOnly], [rowsFromSpecs, rowsFromAggregatesOnly])
 
   const specWidth = (w) => (w.specHigh - w.specLow)
 
@@ -124,22 +175,30 @@ export default function Discovery() {
         Community accuracy vs manufacturer specs. Which brands deliver?
       </p>
 
-      <div className="discovery-search-wrap">
+      <div className="discovery-search-wrap" style={{ display: 'flex', gap: '0.5rem', alignItems: 'stretch' }}>
         <input
           type="text"
           placeholder="Search brand, model, or reference (e.g. Omega Speedmaster)"
           value={search}
-          onChange={(e) => {
-            const v = e.target.value
-            setSearch(v)
-          }}
+          onChange={(e) => setSearch(e.target.value)}
           autoComplete="off"
           autoCorrect="off"
           autoCapitalize="off"
           spellCheck={false}
           className="discovery-search-input"
+          style={{ flex: 1 }}
           aria-label="Search watches"
         />
+        <button
+          type="button"
+          className="btn btn-secondary"
+          onClick={() => fetchData(true)}
+          disabled={refreshing}
+          aria-label="Refresh community data"
+          style={{ flexShrink: 0 }}
+        >
+          {refreshing ? '…' : 'Refresh'}
+        </button>
       </div>
 
       <div className="discovery-cards" key={search}>

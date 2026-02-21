@@ -11,7 +11,7 @@ export default function Login() {
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   const [resetSent, setResetSent] = useState(false)
-  const { authReady, signInWithEmail, signUpWithEmail, signInWithGoogle, resetPassword } = useAuth()
+  const { authReady, signInWithEmail, signUpWithEmail, signInWithGoogle, signInWithApple, resetPassword } = useAuth()
   const navigate = useNavigate()
 
   const handleEmailSubmit = async (e) => {
@@ -75,6 +75,20 @@ export default function Login() {
     }
   }
 
+  const handleApple = async () => {
+    setError('')
+    setBusy(true)
+    try {
+      await signInWithApple()
+      navigate('/', { replace: true })
+    } catch (err) {
+      const msg = err?.message || err?.code || String(err)
+      setError(msg.includes('cancelled') || msg.includes('1001') ? 'Sign in was cancelled.' : msg || 'Apple sign in failed.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
   const brandBlock = (
     <div className="login-brand">
       <div className="login-logo-wrap">
@@ -83,9 +97,10 @@ export default function Login() {
       <h1 className="login-headline">Track your watch accuracy</h1>
       <p className="login-tagline">Why Collector IQ:</p>
       <ul className="login-how">
-        <li><strong>Watch accuracy tracker</strong> — drift test vs atomic time, compare to COSC and manufacturer specs (s/day)</li>
-        <li><strong>Community data</strong> — see how your watch and brands perform in the real world, not just on paper</li>
-        <li><strong>Your data, your control</strong> — export anytime, reset when you correct your watch, first watch free</li>
+        <li><strong>First watch free</strong> — add one watch, no card required</li>
+        <li><strong>Drift test vs atomic time</strong> — compare to COSC and manufacturer specs (s/day)</li>
+        <li><strong>Community data</strong> — see how your watch and brands perform in the real world</li>
+        <li><strong>Your data, your control</strong> — export anytime, cancel anytime</li>
       </ul>
     </div>
   )
@@ -211,6 +226,20 @@ export default function Login() {
       )}
 
       <p style={{ color: 'var(--text-tertiary)', fontSize: 14, marginBottom: '1rem', textAlign: 'center' }}>or</p>
+
+      <button
+        type="button"
+        className="btn-apple"
+        style={{ width: '100%', marginBottom: '0.5rem' }}
+        onClick={handleApple}
+        disabled={busy}
+        aria-label="Sign in with Apple"
+      >
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+          <path d="M17.05 20.28c-.98.95-2.05.88-3.08.4-1.09-.5-2.08-.48-3.24 0-1.44.62-2.2.44-3.06-.4C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09l.01-.01zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"/>
+        </svg>
+        Sign in with Apple
+      </button>
 
       <button
         type="button"
