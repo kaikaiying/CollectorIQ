@@ -1,6 +1,6 @@
 # Apple In-App Purchase — Step-by-Step
 
-Product ID in app: `collectoriq_pro_monthly` ($6.99 CAD/month, adjusted for other countries; no trial)
+Product ID in app: `com.collectoriq.monthly` ($6.99 CAD/month, adjusted for other countries; no trial)
 
 ---
 
@@ -20,7 +20,7 @@ Product ID in app: `collectoriq_pro_monthly` ($6.99 CAD/month, adjusted for othe
 1. In **Subscriptions** → click your subscription group (or create one first)
 2. Click **+** to add a subscription
 3. **Reference name**: `Collector IQ Pro Monthly`
-4. **Product ID**: `collectoriq_pro_monthly` ← must match exactly
+4. **Product ID**: `com.collectoriq.monthly` ← must match exactly
 5. Click **Create**
 
 ### 1.3 Add a Price
@@ -87,7 +87,7 @@ Product ID in app: `collectoriq_pro_monthly` ($6.99 CAD/month, adjusted for othe
 
 | Issue | Fix |
 |-------|-----|
-| "No products available" | Wait 15–30 min after creating in App Store Connect. Ensure Product ID is exactly `collectoriq_pro_monthly` |
+| "No products available" | Wait 15–30 min after creating in App Store Connect. Ensure Product ID is exactly `com.collectoriq.monthly` |
 | "The string did not match expected pattern" | Product not in App Store Connect yet, or Product ID typo. Create the subscription (Part 1 above), wait 15–30 min, rebuild. Apple Pay sheet won’t show until the product exists. |
 | "Cannot connect to iTunes Store" | Use a real device; simulator can be flaky. Check sandbox sign-in |
 | Capability missing | Clean build (⇧⌘K), rebuild |

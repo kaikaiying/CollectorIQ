@@ -2,6 +2,7 @@ const MIN_READINGS_FOR_COMMUNITY_STATS = 3 // Don't show exact mean below this t
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
+import { usePageTitle } from '../contexts/PageTitleContext'
 import { getCollection, SYNC_COMPLETE_EVENT } from '../App'
 import PageSeo from '../components/PageSeo'
 import { getDriftReadings, addDriftReading } from '../lib/driftStorage'
@@ -124,6 +125,7 @@ function DriftChart({ readings }) {
 }
 
 export default function DriftTest() {
+  usePageTitle('Drift test')
   const [searchParams] = useSearchParams()
   const refFromUrl = searchParams.get('ref')
   const [watches, setWatches] = useState([])
@@ -302,7 +304,8 @@ export default function DriftTest() {
     setResult(null)
     try {
       const { date: atomicAtTap, fromServer } = await fetchAtomicTimeOrDevice()
-      const driftSeconds = (atomicAtTap - targetTime) / 1000
+      /* Positive = watch fast (ahead of actual). Negative = watch slow (behind). */
+      const driftSeconds = (targetTime - atomicAtTap) / 1000
       addDriftReading(selectedWatch.reference, driftSeconds, atomicAtTap)
       const updated = getDriftReadings(selectedWatch.reference)
       setReadings(updated)
@@ -340,7 +343,6 @@ export default function DriftTest() {
     <div className="drift-test-page">
       <PageSeo title="Drift test" description="Drift test your watch against atomic clock. Tap when it hits the target — measure accuracy in s/day. Collector IQ is the #1 watch atomic tracker." />
       <div className="drift-test-header">
-        <h1 className="drift-test-title">Drift test</h1>
         <p className="drift-test-sub">Tap when your watch hits the target time. Server-synced accuracy.</p>
       </div>
 
@@ -471,8 +473,8 @@ export default function DriftTest() {
           ) : (
             <>
               <p style={{ margin: 0, color: 'var(--text)' }}>
-                {result.drift > 0 && `Watch is ${Math.abs(result.drift).toFixed(1)} s slow (behind real time).`}
-                {result.drift < 0 && `Watch is ${Math.abs(result.drift).toFixed(1)} s fast (ahead of real time).`}
+                {result.drift > 0 && `Watch is +${result.drift.toFixed(1)} s (fast, ahead of real time).`}
+                {result.drift < 0 && `Watch is ${result.drift.toFixed(1)} s (slow, behind real time).`}
                 {result.drift === 0 && 'Spot on!'}
               </p>
               {result.fromServer === false && (

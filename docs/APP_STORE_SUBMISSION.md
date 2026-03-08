@@ -22,7 +22,7 @@ Checklist to get Collector IQ ready for production submission.
 - [ ] **Build for release** — `npm run build` then `npx cap sync ios`
 - [ ] **Archive in Xcode** — Product → Archive (use a real device or "Any iOS Device")
 - [ ] **In-App Purchase capability** — Xcode → App target → Signing & Capabilities → + Capability → In-App Purchase
-- [ ] **Subscription in App Store Connect** — Create `collectoriq_pro_monthly` (see APPLE_IAP_SETUP.md)
+- [ ] **Subscription in App Store Connect** — Create `com.collectoriq.monthly` (see APPLE_IAP_SETUP.md)
 
 ---
 
@@ -71,7 +71,7 @@ Create the subscription **before** submitting (required for review):
 1. **Subscriptions** → **Subscription Groups** → **+** → Name: `Collector IQ Pro`
 2. **+** to add subscription:
    - **Reference name:** Collector IQ Pro Monthly
-   - **Product ID:** `collectoriq_pro_monthly`
+   - **Product ID:** `com.collectoriq.monthly`
    - **Price:** $6.99 CAD/month
    - **Localization:** At least English (display name, description)
 3. Wait 15–30 min for propagation
@@ -185,7 +185,7 @@ e.g. `watch accuracy,drift test,atomic clock,COSC,chronometer,mechanical watch`
 |------|--------|
 | Bundle ID `app.collectoriq` in Developer Portal | ✓ |
 | App record in App Store Connect | ? |
-| Subscription `collectoriq_pro_monthly` created | ? |
+| Subscription `com.collectoriq.monthly` created | ? |
 | In-App Purchase capability in Xcode | ? |
 | Privacy policy at collectoriq.app/privacy | ✓ |
 | App icons (AppIcon in Assets.xcassets) | ? |

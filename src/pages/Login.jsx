@@ -94,13 +94,12 @@ export default function Login() {
       <div className="login-logo-wrap">
         <img src={`${import.meta.env.BASE_URL}logo.png`} alt="Collector IQ" className="login-logo" />
       </div>
-      <h1 className="login-headline">Track your watch accuracy</h1>
-      <p className="login-tagline">Why Collector IQ:</p>
+      <h1 className="login-headline">Watch accuracy tracking that holds brands accountable</h1>
+      <p className="login-tagline">Measure precision. Compare to specs. See real-world data.</p>
       <ul className="login-how">
-        <li><strong>First watch free</strong> — add one watch, no card required</li>
-        <li><strong>Drift test vs atomic time</strong> — compare to COSC and manufacturer specs (s/day)</li>
-        <li><strong>Community data</strong> — see how your watch and brands perform in the real world</li>
-        <li><strong>Your data, your control</strong> — export anytime, cancel anytime</li>
+        <li><strong>Test your accuracy</strong> — compare your watch to atomic time and official specs</li>
+        <li><strong>See how it stacks up</strong> — real-world performance from the watch community</li>
+        <li><strong>Own your data</strong> — export results anytime, no lock-in</li>
       </ul>
     </div>
   )
@@ -116,7 +115,7 @@ export default function Login() {
 
   return (
     <div className="app-main" style={{ paddingTop: '1.5rem' }}>
-      <PageSeo title="Sign in" description="Sign in to Collector IQ — the #1 watch atomic tracker. Drift test vs atomic clock. Compare to COSC and manufacturer specs. Free for watch collectors." />
+      <PageSeo title="Sign in" description="Sign in to Collector IQ — watch accuracy tracking that holds brands accountable. Drift test vs atomic clock. Compare to manufacturer specs. Community data from collectors." />
       {brandBlock}
 
       {mode === 'forgot' ? (

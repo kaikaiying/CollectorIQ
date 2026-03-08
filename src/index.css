@@ -33,6 +33,7 @@ html, body {
   height: 100%;
   overflow: hidden;
   margin: 0;
+  touch-action: manipulation;
 }
 
 body {
@@ -42,6 +43,7 @@ body {
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  -webkit-text-size-adjust: 100%;
   background: linear-gradient(145deg, #0a0a0c 0%, #12121a 40%, #0d0d12 100%);
   background-attachment: fixed;
   color: var(--text);
@@ -70,26 +72,64 @@ a:hover {
   overflow: hidden;
 }
 
-.app-main {
+/* Reserves space for status bar (time) — scroll area starts below it, so content never overlaps */
+.app-status-bar-spacer {
+  flex-shrink: 0;
+  height: env(safe-area-inset-top, 0px);
+  min-height: env(safe-area-inset-top, 0px);
+}
+/* iOS: env() can be 0 for ~300ms on load; use fallback so status bar never overlaps */
+.platform-ios .app-status-bar-spacer {
+  height: max(47px, env(safe-area-inset-top, 0px));
+  min-height: max(47px, env(safe-area-inset-top, 0px));
+}
+
+/* Fixed header – outside scroll container so content never pops above it */
+.app-page-header {
+  flex-shrink: 0;
+  padding: var(--space-lg) max(var(--space), env(safe-area-inset-right)) 0 max(var(--space), env(safe-area-inset-left));
+  max-width: 480px;
+  margin: 0 auto;
+  width: 100%;
+  background: linear-gradient(180deg, #0a0a0c 0%, #12121a 40%, #0d0d12 100%);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+.app-page-header .page-title {
+  margin-bottom: 0;
+  padding-bottom: var(--space);
+  position: static;
+  transform: none;
+  -webkit-transform: none;
+  isolation: auto;
+  -webkit-backface-visibility: visible;
+  backface-visibility: visible;
+}
+
+.app-main,
+.app-scroll {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
-  padding: max(var(--space-lg), env(safe-area-inset-top)) max(var(--space), env(safe-area-inset-right)) max(var(--space-lg), env(safe-area-inset-bottom)) max(var(--space), env(safe-area-inset-left));
+  overscroll-behavior-y: contain;
+  overscroll-behavior-x: none;
+  padding: var(--space-lg) max(var(--space), env(safe-area-inset-right)) max(var(--space-lg), env(safe-area-inset-bottom)) max(var(--space), env(safe-area-inset-left));
   max-width: 480px;
   margin: 0 auto;
   width: 100%;
 }
 
-.app-layout--with-nav .app-main {
+.app-layout--with-nav .app-main,
+.app-layout--with-nav .app-scroll {
   padding-bottom: calc(72px + max(0.75rem, env(safe-area-inset-bottom)));
 }
 
-/* Bottom nav – part of layout, never scrolls away */
+/* Bottom nav – fixed at bottom, never scrolls */
 .nav-tabs {
   flex-shrink: 0;
   touch-action: manipulation;
+  overscroll-behavior: none;
   width: 100%;
   max-width: 480px;
   margin: 0 auto;
@@ -152,9 +192,22 @@ a:hover {
   letter-spacing: 0.02em;
   margin: 0 0 var(--space-lg);
   padding-top: 0.5rem;
-  padding-bottom: 0.5rem;
+  padding-bottom: 1rem;
   color: var(--text);
   line-height: 1.25;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  /* Match app gradient – content under title must stay hidden */
+  background: linear-gradient(180deg, #0a0a0c 0%, #12121a 40%, #0d0d12 100%);
+  margin-bottom: var(--space);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.04);
+  isolation: isolate;
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  /* Own compositing layer so scroll content stays behind */
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
 }
 .watch-model-title {
   font-family: var(--font-body);
@@ -332,6 +385,7 @@ a:hover {
   background: rgba(18, 18, 22, 0.6);
   color: var(--text);
   font-size: 17px;
+  touch-action: manipulation;
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   -webkit-appearance: none;
@@ -983,13 +1037,14 @@ a:hover {
 .discovery-search-input {
   width: 100%;
   padding: 0.65rem 1rem;
-  font-size: 15px;
+  font-size: 16px; /* 16px min prevents iOS zoom on focus */
   font-family: var(--font-body);
   color: var(--text);
   background: var(--bg);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   outline: none;
+  touch-action: manipulation;
 }
 
 .discovery-search-input::placeholder {

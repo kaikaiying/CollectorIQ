@@ -1,6 +1,7 @@
 import { HashRouter, Routes, Route, Navigate, useLocation, Link } from 'react-router-dom'
 import { useEffect } from 'react'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
+import { PageTitleProvider, usePageTitleValue } from './contexts/PageTitleContext'
 import { db } from './firebase'
 import { syncFromCloud, pushCollectionToCloud, pushReadingsToCloud } from './lib/userDataSync'
 import { getDriftReadings, saveDriftReadings } from './lib/driftStorage'
@@ -35,6 +36,16 @@ export function setCollection(watches) {
 
 /** Dispatch when cloud sync completes so components can refresh. */
 export const SYNC_COMPLETE_EVENT = 'collectoriq-sync-complete'
+
+function AppPageHeader() {
+  const title = usePageTitleValue()
+  if (!title) return null
+  return (
+    <header className="app-page-header" aria-hidden="false">
+      <h1 className="page-title">{title}</h1>
+    </header>
+  )
+}
 
 function AppContent() {
   const { user, loading } = useAuth()
@@ -86,33 +97,37 @@ function AppContent() {
   const showNav = !isLogin && !isAddWatch && !isPrivacy && !isShare && !isCommunity && !isSubscribe
 
   return (
-    <div className={`app-layout ${showNav ? 'app-layout--with-nav' : ''}`}>
-      <main className="app-main">
-        <Routes>
-          <Route path="/login" element={<Login />} />
-          <Route path="/privacy" element={<PrivacyPolicy />} />
-          <Route path="/share" element={<ShareResults />} />
-          <Route path="/community" element={<Community />} />
-          <Route path="/subscribe" element={<Subscribe />} />
-          <Route path="/add-watch" element={<AddWatch />} />
-          <Route path="/watch/:reference" element={<WatchDetail />} />
-          <Route path="/ask" element={<Ask />} />
-          <Route path="/" element={<Collection />} />
-          <Route path="/drift-test" element={<DriftTest />} />
-          <Route path="/discovery" element={<Discovery />} />
-          <Route path="/settings" element={<Settings />} />
-        </Routes>
-      </main>
+    <PageTitleProvider>
+      <div className={`app-layout ${showNav ? 'app-layout--with-nav' : ''}`}>
+        <div className="app-status-bar-spacer" aria-hidden="true" />
+        {showNav && <AppPageHeader />}
+        <main className={showNav ? 'app-scroll' : 'app-main'}>
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route path="/privacy" element={<PrivacyPolicy />} />
+            <Route path="/share" element={<ShareResults />} />
+            <Route path="/community" element={<Community />} />
+            <Route path="/subscribe" element={<Subscribe />} />
+            <Route path="/add-watch" element={<AddWatch />} />
+            <Route path="/watch/:reference" element={<WatchDetail />} />
+            <Route path="/ask" element={<Ask />} />
+            <Route path="/" element={<Collection />} />
+            <Route path="/drift-test" element={<DriftTest />} />
+            <Route path="/discovery" element={<Discovery />} />
+            <Route path="/settings" element={<Settings />} />
+          </Routes>
+        </main>
 
-      {showNav && (
-        <nav className="nav-tabs">
-          <Link to="/" className={location.pathname === '/' ? 'active' : ''}>Collection</Link>
-          <Link to="/drift-test" className={location.pathname === '/drift-test' ? 'active' : ''}>Drift test</Link>
-          <Link to="/discovery" className={location.pathname === '/discovery' ? 'active' : ''}>Discovery</Link>
-          <Link to="/settings" className={location.pathname === '/settings' ? 'active' : ''}>Settings</Link>
-        </nav>
-      )}
-    </div>
+        {showNav && (
+          <nav className="nav-tabs">
+            <Link to="/" className={location.pathname === '/' ? 'active' : ''}>Collection</Link>
+            <Link to="/drift-test" className={location.pathname === '/drift-test' ? 'active' : ''}>Drift test</Link>
+            <Link to="/discovery" className={location.pathname === '/discovery' ? 'active' : ''}>Discovery</Link>
+            <Link to="/settings" className={location.pathname === '/settings' ? 'active' : ''}>Settings</Link>
+          </nav>
+        )}
+      </div>
+    </PageTitleProvider>
   )
 }
 

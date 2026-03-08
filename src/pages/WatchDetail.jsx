@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
+import { usePageTitle } from '../contexts/PageTitleContext'
 import { getCollection, SYNC_COMPLETE_EVENT } from '../App'
 import { getDriftReadings, deleteDriftReading, clearDriftReadings } from '../lib/driftStorage'
 import { pushReadingsToCloud } from '../lib/userDataSync'
@@ -34,6 +35,8 @@ export default function WatchDetail() {
     return () => window.removeEventListener(SYNC_COMPLETE_EVENT, refresh)
   }, [reference])
 
+  usePageTitle(watch?.model ?? '')
+
   if (!watch) {
     return (
       <div className="card">
@@ -55,7 +58,6 @@ export default function WatchDetail() {
 
   return (
     <>
-      <h1 className="page-title watch-model-title">{watch.model}</h1>
       <p style={{ color: 'var(--text-secondary)', marginTop: '-0.5rem', marginBottom: '1rem' }}>
         {watch.brand} · Ref: {watch.reference}
         {watch.isCustom && <span style={{ marginLeft: 6, fontSize: 12, color: 'var(--text-tertiary)' }}>(custom)</span>}

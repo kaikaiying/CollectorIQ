@@ -79,8 +79,8 @@ export default function AddWatch() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
           body: JSON.stringify({
-            successUrl: window.location.origin + '/?subscription=success',
-            cancelUrl: window.location.origin + '/add-watch',
+            successUrl: window.location.origin + (window.location.pathname || '/') + '#/?subscription=success',
+            cancelUrl: window.location.origin + (window.location.pathname || '/') + '#/add-watch',
             plan,
           }),
         })

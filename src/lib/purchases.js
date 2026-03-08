@@ -6,8 +6,8 @@
 import { Capacitor } from '@capacitor/core'
 import { NativePurchases, PURCHASE_TYPE } from '@capgo/native-purchases'
 
-// Product ID from App Store Connect (e.g. collectoriq_pro_monthly)
-const SUBSCRIPTION_PRODUCT_ID = 'collectoriq_pro_monthly'
+// Product ID from App Store Connect
+const SUBSCRIPTION_PRODUCT_ID = 'com.collectoriq.monthly'
 
 export function isIAPPlatform() {
   return Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'ios'

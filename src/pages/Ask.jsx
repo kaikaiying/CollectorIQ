@@ -4,6 +4,7 @@ import { getDriftReadings } from '../lib/driftStorage'
 import { fetchAggregates } from '../lib/driftCloud'
 import { useAuth } from '../contexts/AuthContext'
 import PageSeo from '../components/PageSeo'
+import { usePageTitle } from '../contexts/PageTitleContext'
 
 function getApiBase() {
   if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL.replace(/\/$/, '')
@@ -48,6 +49,7 @@ function buildContext(watches, communityByRef) {
 
 export default function Ask() {
   const { user } = useAuth()
+  usePageTitle('Ask about your accuracy')
   const [messages, setMessages] = useState([])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
@@ -91,7 +93,6 @@ export default function Ask() {
   return (
     <>
       <PageSeo title="Ask" description="Ask about your watch accuracy. AI answers using your drift data and specs. 5 questions per day." />
-      <h1 className="page-title">Ask about your accuracy</h1>
       <p style={{ color: 'var(--text-secondary)', marginBottom: '1rem', fontSize: 15 }}>
         Ask anything about your watches and drift data. Answers use your collection and readings. <strong>5 questions per day.</strong>
       </p>

@@ -1,6 +1,7 @@
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { fetchAggregates } from '../lib/driftCloud'
 import PageSeo from '../components/PageSeo'
+import { usePageTitle } from '../contexts/PageTitleContext'
 
 function parseSpec(s) {
   if (!s || typeof s !== 'string') return null
@@ -40,43 +41,21 @@ function loadData() {
 }
 
 export default function Discovery() {
+  usePageTitle('Discovery')
   const [specs, setSpecs] = useState([])
   const [aggregates, setAggregates] = useState([])
   const [loading, setLoading] = useState(true)
-  const [refreshing, setRefreshing] = useState(false)
   const [search, setSearch] = useState('')
 
-  const fetchData = useCallback((showRefreshing = false) => {
-    if (showRefreshing) setRefreshing(true)
+  useEffect(() => {
     loadData()
       .then(([data, aggs]) => {
         setSpecs(Array.isArray(data) ? data : [])
         setAggregates(Array.isArray(aggs) ? aggs : [])
       })
       .catch(() => {})
-      .finally(() => {
-        setLoading(false)
-        setRefreshing(false)
-      })
+      .finally(() => setLoading(false))
   }, [])
-
-  useEffect(() => {
-    fetchData()
-  }, [fetchData])
-
-  // Refetch when user returns to tab (e.g. after adding readings elsewhere)
-  useEffect(() => {
-    const onFocus = () => fetchData(true)
-    const onVisibility = () => {
-      if (document.visibilityState === 'visible') fetchData(true)
-    }
-    window.addEventListener('focus', onFocus)
-    document.addEventListener('visibilitychange', onVisibility)
-    return () => {
-      window.removeEventListener('focus', onFocus)
-      document.removeEventListener('visibilitychange', onVisibility)
-    }
-  }, [fetchData])
 
   const withRange = useMemo(() =>
     specs
@@ -164,42 +143,29 @@ export default function Discovery() {
   }
 
   if (loading) {
-    return <p className="page-title">Loading…</p>
+    return <p style={{ color: 'var(--text-secondary)', padding: 'var(--space-lg)' }}>Loading…</p>
   }
 
   return (
     <>
       <PageSeo title="Discovery" description="Community watch accuracy data vs manufacturer specs (s/day). See how Omega, Rolex, Seiko perform. Watch atomic tracker with real-world data." />
-      <h1 className="page-title">Discovery</h1>
       <p style={{ color: 'var(--text-secondary)', marginBottom: 'var(--space)' }}>
         Community accuracy vs manufacturer specs. Which brands deliver?
       </p>
 
-      <div className="discovery-search-wrap" style={{ display: 'flex', gap: '0.5rem', alignItems: 'stretch' }}>
-        <input
-          type="text"
-          placeholder="Search brand, model, or reference (e.g. Omega Speedmaster)"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          autoComplete="off"
-          autoCorrect="off"
-          autoCapitalize="off"
-          spellCheck={false}
-          className="discovery-search-input"
-          style={{ flex: 1 }}
-          aria-label="Search watches"
-        />
-        <button
-          type="button"
-          className="btn btn-secondary"
-          onClick={() => fetchData(true)}
-          disabled={refreshing}
-          aria-label="Refresh community data"
-          style={{ flexShrink: 0 }}
-        >
-          {refreshing ? '…' : 'Refresh'}
-        </button>
-      </div>
+      <input
+        type="text"
+        placeholder="Search brand, model, or reference (e.g. Omega Speedmaster)"
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        autoComplete="off"
+        autoCorrect="off"
+        autoCapitalize="off"
+        spellCheck={false}
+        className="discovery-search-input"
+        style={{ width: '100%', marginBottom: 'var(--space)' }}
+        aria-label="Search watches"
+      />
 
       <div className="discovery-cards" key={search}>
         {displayRows.length === 0 ? (

@@ -1,12 +1,16 @@
 import { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { getCollection, setCollection, SYNC_COMPLETE_EVENT } from '../App'
 import PageSeo from '../components/PageSeo'
 import { useAuth } from '../contexts/AuthContext'
+import { usePageTitle } from '../contexts/PageTitleContext'
 import { getSubscriptionStatus, SUBSCRIPTION_PRICE_DISPLAY } from '../lib/subscription'
 
 export default function Collection() {
   const { user } = useAuth()
+  usePageTitle('Collection')
+  const [searchParams, setSearchParams] = useSearchParams()
+  const [subscriptionSuccess, setSubscriptionSuccess] = useState(false)
   const [watches, setWatches] = useState([])
   const [hasActiveSubscription, setHasActiveSubscription] = useState(false)
   const [subLoading, setSubLoading] = useState(true)
@@ -17,6 +21,15 @@ export default function Collection() {
     window.addEventListener(SYNC_COMPLETE_EVENT, onSync)
     return () => window.removeEventListener(SYNC_COMPLETE_EVENT, onSync)
   }, [])
+
+  useEffect(() => {
+    if (searchParams.get('subscription') === 'success') {
+      setSubscriptionSuccess(true)
+      setSearchParams({}, { replace: true })
+      const t = setTimeout(() => setSubscriptionSuccess(false), 5000)
+      return () => clearTimeout(t)
+    }
+  }, [searchParams, setSearchParams])
 
   useEffect(() => {
     if (!user?.uid || watches.length < 1) {
@@ -43,7 +56,12 @@ export default function Collection() {
   return (
     <>
       <PageSeo title="Collection" description="Your watch collection. Track accuracy for each timepiece with the #1 watch atomic tracker. Drift test vs atomic clock." />
-      <h1 className="page-title">Collection</h1>
+
+      {subscriptionSuccess && (
+        <div className="card" style={{ marginBottom: '1rem', background: 'rgba(34, 197, 94, 0.15)', borderColor: 'rgba(34, 197, 94, 0.4)' }}>
+          <p style={{ margin: 0, color: 'var(--text)', fontWeight: 500 }}>Subscription active. You can add unlimited watches.</p>
+        </div>
+      )}
 
       {watches.length === 0 ? (
         <div className="card">

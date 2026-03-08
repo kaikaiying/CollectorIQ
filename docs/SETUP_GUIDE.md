@@ -53,7 +53,7 @@ VITE_API_URL=https://your-domain.com
 
 1. Your app → In-App Purchases → Create
 2. Type: **Auto-Renewable Subscription**
-3. Product ID: `collectoriq_pro_monthly` (or update `src/lib/purchases.js`)
+3. Product ID: `com.collectoriq.monthly` (or update `src/lib/purchases.js`)
 4. Price: $6.99 CAD/month
 5. Add to a Subscription Group
 
@@ -64,10 +64,10 @@ VITE_API_URL=https://your-domain.com
 
 ### Product ID
 
-Default is `collectoriq_pro_monthly`. To change it, edit `src/lib/purchases.js`:
+Default is `com.collectoriq.monthly`. To change it, edit `src/lib/purchases.js`:
 
 ```js
-const SUBSCRIPTION_PRODUCT_ID = 'your_product_id'
+const SUBSCRIPTION_PRODUCT_ID = 'com.collectoriq.monthly'
 ```
 
 ### Testing

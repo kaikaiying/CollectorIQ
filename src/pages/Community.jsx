@@ -48,7 +48,7 @@ export default function Community() {
             value={b.text}
             rows={4}
             className="input"
-            style={{ fontFamily: 'var(--font-body)', fontSize: 14, resize: 'vertical', minHeight: 80 }}
+            style={{ fontFamily: 'var(--font-body)', fontSize: 16, resize: 'vertical', minHeight: 80 }}
             onClick={(e) => e.target.select()}
           />
           <button
