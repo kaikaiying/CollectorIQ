@@ -60,5 +60,9 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>Capture your watch dial to read the time (dial test feature).</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Select a photo of your watch dial to read the time (dial test feature).</string>
 </dict>
 </plist>
