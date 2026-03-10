@@ -68,7 +68,13 @@ export default function DialTest() {
   const containerRef = useRef(null)
   const imgRef = useRef(null)
   const [imgSize, setImgSize] = useState(null)
-  const [orientation, setOrientation] = useState('top') // where 12 o'clock is: top, right, bottom, left
+  const [orientation, setOrientation] = useState('top')
+  const [cameraOpen, setCameraOpen] = useState(false)
+  const [guideOpen, setGuideOpen] = useState(false)
+  const [cameraError, setCameraError] = useState(null)
+  const videoRef = useRef(null)
+  const streamRef = useRef(null)
+  const canvasRef = useRef(null)
 
   const detectedTime = computeTimeFromHands(handPoints, centerPoint, orientation)
   const rawAngles = getRawAngles(handPoints, centerPoint, orientation)
@@ -191,6 +197,73 @@ export default function DialTest() {
     setZoom(1)
   }
 
+  const stopCamera = useCallback(() => {
+    const stream = streamRef.current
+    if (stream) {
+      stream.getTracks().forEach((t) => t.stop())
+      streamRef.current = null
+    }
+    setCameraOpen(false)
+    setCameraError(null)
+  }, [])
+
+  const startCamera = useCallback(async () => {
+    if (navigator.mediaDevices?.getUserMedia) {
+      setCameraError(null)
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: 'environment' },
+          audio: false,
+        })
+        streamRef.current = stream
+        setCameraOpen(true)
+        return
+      } catch (err) {
+        setCameraError(err.message || 'Camera access denied')
+      }
+    }
+    setGuideOpen(true)
+  }, [])
+
+  useEffect(() => {
+    if (!cameraOpen) return
+    const stream = streamRef.current
+    const video = videoRef.current
+    if (stream && video) video.srcObject = stream
+    return () => {
+      if (stream) {
+        stream.getTracks().forEach((t) => t.stop())
+        streamRef.current = null
+      }
+    }
+  }, [cameraOpen])
+
+  const captureFromCamera = useCallback(() => {
+    const video = videoRef.current
+    const canvas = canvasRef.current
+    if (!video?.videoWidth || !canvas) return
+    const ctx = canvas.getContext('2d')
+    canvas.width = video.videoWidth
+    canvas.height = video.videoHeight
+    ctx.drawImage(video, 0, 0)
+    canvas.toBlob(
+      (blob) => {
+        if (!blob) return
+        const file = new File([blob], 'dial.jpg', { type: 'image/jpeg' })
+        const url = URL.createObjectURL(file)
+        setImageUrl(url)
+        setImgSize(null)
+        setCenterPoint(null)
+        setHandPoints({ hour: null, minute: null, second: null })
+        setHandMode(null)
+        setZoom(1)
+        stopCamera()
+      },
+      'image/jpeg',
+      0.92
+    )
+  }, [stopCamera])
+
   const canSave = centerPoint && handPoints.hour && handPoints.minute && handPoints.second
   const saveAllowed = calibrationStatus?.ok
 
@@ -240,17 +313,30 @@ export default function DialTest() {
           capture="environment"
           onChange={handleCapture}
           style={{ display: 'none' }}
-          aria-label="Take or select photo"
+          aria-label="Take or choose photo"
         />
         {!imageUrl ? (
-          <button
-            type="button"
-            className="btn"
-            style={{ width: '100%' }}
-            onClick={() => fileInputRef.current?.click()}
-          >
-            Take photo of dial
-          </button>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            <button
+              type="button"
+              className="btn"
+              style={{ width: '100%' }}
+              onClick={startCamera}
+            >
+              Take photo
+            </button>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              style={{ width: '100%' }}
+              onClick={() => fileInputRef.current?.click()}
+            >
+              Choose from gallery
+            </button>
+            {cameraError && (
+              <p style={{ margin: 0, fontSize: 13, color: 'var(--error)' }}>{cameraError}</p>
+            )}
+          </div>
         ) : (
           <>
             <div
@@ -471,6 +557,220 @@ export default function DialTest() {
       <p style={{ marginTop: 'var(--space)', fontSize: 12, color: 'var(--text-tertiary)' }}>
         Per watch model · 5 calibrations max, 1 per day · Data aggregates across users
       </p>
+
+      {cameraOpen && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 99999,
+            background: '#000',
+            display: 'flex',
+            flexDirection: 'column',
+          }}
+        >
+          <video
+            ref={videoRef}
+            autoPlay
+            playsInline
+            muted
+            style={{
+              position: 'absolute',
+              inset: 0,
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover',
+              zIndex: 0,
+            }}
+          />
+          <div
+            style={{
+              position: 'absolute',
+              inset: 0,
+              zIndex: 1,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              pointerEvents: 'none',
+            }}
+          >
+            <p style={{ position: 'absolute', top: '10%', left: 0, right: 0, textAlign: 'center', color: '#fff', fontSize: 16, margin: 0, textShadow: '0 2px 4px rgba(0,0,0,0.9)' }}>
+              Center the dial · 12 o'clock at top
+            </p>
+            <div
+              style={{
+                width: 160,
+                height: 160,
+                border: '4px solid #fff',
+                borderRadius: '50%',
+                position: 'relative',
+                boxShadow: '0 0 0 2px rgba(0,0,0,0.5), 0 0 20px rgba(255,255,255,0.3)',
+              }}
+            >
+              <span
+                style={{
+                  position: 'absolute',
+                  top: -12,
+                  left: '50%',
+                  transform: 'translateX(-50%)',
+                  fontSize: 16,
+                  fontWeight: 800,
+                  color: '#fff',
+                  textShadow: '0 2px 4px #000, 0 0 8px rgba(255,255,255,0.5)',
+                }}
+              >
+                12
+              </span>
+              <span
+                style={{
+                  position: 'absolute',
+                  left: '50%',
+                  top: 0,
+                  bottom: 0,
+                  width: 4,
+                  background: '#fff',
+                  transform: 'translateX(-50%)',
+                  boxShadow: '0 0 4px rgba(0,0,0,0.5)',
+                }}
+              />
+              <span
+                style={{
+                  position: 'absolute',
+                  top: '50%',
+                  left: 0,
+                  right: 0,
+                  height: 4,
+                  background: '#fff',
+                  transform: 'translateY(-50%)',
+                  boxShadow: '0 0 4px rgba(0,0,0,0.5)',
+                }}
+              />
+            </div>
+          </div>
+          <div
+            style={{
+              position: 'absolute',
+              bottom: 0,
+              left: 0,
+              right: 0,
+              padding: '1.5rem',
+              display: 'flex',
+              gap: '1rem',
+              justifyContent: 'center',
+              pointerEvents: 'auto',
+            }}
+          >
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={stopCamera}
+              style={{ padding: '0.75rem 1.5rem' }}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              className="btn"
+              onClick={captureFromCamera}
+              style={{ padding: '0.75rem 1.5rem' }}
+            >
+              Capture
+            </button>
+          </div>
+        </div>
+      )}
+
+      {guideOpen && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 99999,
+            background: '#000',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <p style={{ position: 'absolute', top: '12%', left: 0, right: 0, textAlign: 'center', color: '#fff', fontSize: 17, margin: 0, padding: '0 1.5rem' }}>
+            Align your watch: center the dial, 12 o'clock at top
+          </p>
+          <div
+            style={{
+              width: 180,
+              height: 180,
+              border: '4px solid #fff',
+              borderRadius: '50%',
+              position: 'relative',
+              boxShadow: '0 0 0 2px rgba(0,0,0,0.5), 0 0 24px rgba(255,255,255,0.25)',
+            }}
+          >
+            <span
+              style={{
+                position: 'absolute',
+                top: -14,
+                left: '50%',
+                transform: 'translateX(-50%)',
+                fontSize: 18,
+                fontWeight: 800,
+                color: '#fff',
+                textShadow: '0 2px 4px #000',
+              }}
+            >
+              12
+            </span>
+            <span
+              style={{
+                position: 'absolute',
+                left: '50%',
+                top: 0,
+                bottom: 0,
+                width: 4,
+                background: '#fff',
+                transform: 'translateX(-50%)',
+                boxShadow: '0 0 4px rgba(0,0,0,0.5)',
+              }}
+            />
+            <span
+              style={{
+                position: 'absolute',
+                top: '50%',
+                left: 0,
+                right: 0,
+                height: 4,
+                background: '#fff',
+                transform: 'translateY(-50%)',
+                boxShadow: '0 0 4px rgba(0,0,0,0.5)',
+              }}
+            />
+          </div>
+          <div style={{ position: 'absolute', bottom: '20%', left: 0, right: 0, padding: '0 1.5rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            <button
+              type="button"
+              className="btn"
+              style={{ width: '100%', padding: '1rem' }}
+              onClick={() => {
+                setGuideOpen(false)
+                fileInputRef.current?.click()
+              }}
+            >
+              Open camera
+            </button>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              style={{ width: '100%', padding: '1rem' }}
+              onClick={() => setGuideOpen(false)}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+      <canvas ref={canvasRef} style={{ display: 'none' }} />
     </>
   )
 }

@@ -62,6 +62,8 @@
 	<true/>
 	<key>NSCameraUsageDescription</key>
 	<string>Capture your watch dial to read the time (dial test feature).</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Required for camera access in dial test.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Select a photo of your watch dial to read the time (dial test feature).</string>
 </dict>
