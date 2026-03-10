@@ -70,6 +70,8 @@ export default function DialTest() {
   const [imgSize, setImgSize] = useState(null)
   const [orientation, setOrientation] = useState('top')
   const [rotation, setRotation] = useState(0)
+  const [pan, setPan] = useState({ x: 0, y: 0 })
+  const panStartRef = useRef(null)
 
   const detectedTime = computeTimeFromHands(handPoints, centerPoint, orientation)
   const rawAngles = getRawAngles(handPoints, centerPoint, orientation)
@@ -113,10 +115,11 @@ export default function DialTest() {
     setHandMode(null)
     setZoom(1)
     setRotation(0)
+    setPan({ x: 0, y: 0 })
     e.target.value = ''
   }
 
-  /** Convert container click to image coords (0-100%). object-fit: contain. Accounts for rotation. */
+  /** Convert container click to image coords (0-100%). Accounts for zoom, pan, rotation. */
   const containerToImageCoords = useCallback((clientX, clientY) => {
     const container = containerRef.current
     const img = imgRef.current
@@ -129,10 +132,10 @@ export default function DialTest() {
     const scale = Math.min(cw / iw, ch / ih)
     const rw = iw * scale
     const rh = ih * scale
-    const cx = (cw - rw) / 2 + rw / 2
-    const cy = (ch - rh) / 2 + rh / 2
-    let px = clientX - rect.left - cx
-    let py = clientY - rect.top - cy
+    const cx = rect.left + cw / 2 + pan.x
+    const cy = rect.top + ch / 2 + pan.y
+    let px = (clientX - cx) / zoom
+    let py = (clientY - cy) / zoom
     const rad = (-rotation * Math.PI) / 180
     const cos = Math.cos(rad)
     const sin = Math.sin(rad)
@@ -141,7 +144,7 @@ export default function DialTest() {
     const x = ((ux + rw / 2) / rw) * 100
     const y = ((uy + rh / 2) / rh) * 100
     return { x: Math.max(0, Math.min(100, x)), y: Math.max(0, Math.min(100, y)) }
-  }, [rotation])
+  }, [rotation, zoom, pan.x, pan.y])
 
   const handleImageClick = (e) => {
     if (!containerRef.current || !handMode) return
@@ -166,30 +169,91 @@ export default function DialTest() {
         e.touches[1].clientY - e.touches[0].clientY
       )
       if (lastPinchRef.current != null) {
-        const delta = (d - lastPinchRef.current) / 100
-        setZoom((z) => Math.max(1, Math.min(4, z + delta)))
+        const delta = (d - lastPinchRef.current) / 80
+        setZoom((z) => Math.max(0.5, Math.min(6, z + delta)))
       }
       lastPinchRef.current = d
     }
   }, [])
 
-  const handleTouchEnd = useCallback(() => {
-    lastPinchRef.current = null
+  const handleTouchStart = useCallback((e) => {
+    if (e.touches?.length === 1 && !handMode) {
+      panStartRef.current = { x: e.touches[0].clientX - pan.x, y: e.touches[0].clientY - pan.y }
+    }
+  }, [pan.x, pan.y, handMode])
+
+  const handleTouchMove = useCallback((e) => {
+    if (e.touches?.length === 2) {
+      handlePinch(e)
+    }
+  }, [handlePinch])
+
+  const handleTouchEnd = useCallback((e) => {
+    if (e.touches?.length < 2) lastPinchRef.current = null
+    if (e.touches?.length === 0) panStartRef.current = null
+  }, [])
+
+  const handleMouseDown = useCallback((e) => {
+    if (e.button === 0 && !handMode) panStartRef.current = { x: e.clientX - pan.x, y: e.clientY - pan.y }
+  }, [pan.x, pan.y, handMode])
+
+  const handleMouseMove = useCallback((e) => {
+    if (e.buttons === 1 && panStartRef.current) {
+      setPan({ x: e.clientX - panStartRef.current.x, y: e.clientY - panStartRef.current.y })
+    }
+  }, [])
+
+  const handleMouseUp = useCallback(() => {
+    panStartRef.current = null
   }, [])
 
   useEffect(() => {
     const el = containerRef.current
     if (!el) return
-    const onMove = (e) => { if (e.touches?.length === 2) handlePinch(e) }
-    el.addEventListener('touchmove', onMove, { passive: false })
+    el.addEventListener('touchstart', handleTouchStart, { passive: true, capture: true })
+    el.addEventListener('touchmove', handleTouchMove, { passive: false, capture: true })
     el.addEventListener('touchend', handleTouchEnd)
     el.addEventListener('touchcancel', handleTouchEnd)
     return () => {
-      el.removeEventListener('touchmove', onMove)
+      el.removeEventListener('touchstart', handleTouchStart)
+      el.removeEventListener('touchmove', handleTouchMove)
       el.removeEventListener('touchend', handleTouchEnd)
       el.removeEventListener('touchcancel', handleTouchEnd)
     }
-  }, [handlePinch, handleTouchEnd])
+  }, [handleTouchStart, handleTouchMove, handleTouchEnd])
+
+  useEffect(() => {
+    const onMove = (e) => {
+      if (panStartRef.current && e.touches?.length === 1) {
+        e.preventDefault()
+        e.stopPropagation()
+        setPan({
+          x: e.touches[0].clientX - panStartRef.current.x,
+          y: e.touches[0].clientY - panStartRef.current.y,
+        })
+      }
+    }
+    const onEnd = (e) => {
+      if (e.touches?.length === 0) panStartRef.current = null
+    }
+    document.addEventListener('touchmove', onMove, { passive: false, capture: true })
+    document.addEventListener('touchend', onEnd, { capture: true })
+    document.addEventListener('touchcancel', onEnd, { capture: true })
+    return () => {
+      document.removeEventListener('touchmove', onMove, { capture: true })
+      document.removeEventListener('touchend', onEnd, { capture: true })
+      document.removeEventListener('touchcancel', onEnd, { capture: true })
+    }
+  }, [])
+
+  useEffect(() => {
+    window.addEventListener('mousemove', handleMouseMove)
+    window.addEventListener('mouseup', handleMouseUp)
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove)
+      window.removeEventListener('mouseup', handleMouseUp)
+    }
+  }, [handleMouseMove, handleMouseUp])
 
   const clearImage = () => {
     if (imageUrl) URL.revokeObjectURL(imageUrl)
@@ -199,6 +263,7 @@ export default function DialTest() {
     setHandMode(null)
     setZoom(1)
     setRotation(0)
+    setPan({ x: 0, y: 0 })
   }
 
 
@@ -274,27 +339,41 @@ export default function DialTest() {
           </div>
         ) : (
           <>
+            <p style={{ margin: '0 0 0.5rem', fontSize: 13, color: 'var(--text-secondary)', fontWeight: 500 }}>
+              Pinch to zoom, drag to pan. Align dial center with the crosshair.
+            </p>
             <div
+              ref={containerRef}
+              onClick={handleImageClick}
+              onTouchStart={handleTouchStart}
+              onMouseDown={handleMouseDown}
+              onMouseLeave={handleMouseUp}
               style={{
-                overflow: 'auto',
+                position: 'relative',
                 width: '100%',
-                aspectRatio: '1',
-                maxHeight: 340,
+                height: '70vh',
+                minHeight: 320,
+                maxHeight: 500,
                 borderRadius: 'var(--radius-sm)',
-                background: 'var(--bg-elevated)',
-                WebkitOverflowScrolling: 'touch',
+                background: '#000',
+                overflow: 'hidden',
+                touchAction: 'none',
+                WebkitTouchCallout: 'none',
+                WebkitUserSelect: 'none',
+                userSelect: 'none',
+                cursor: handMode ? 'crosshair' : 'grab',
               }}
             >
               <div
-                ref={containerRef}
                 style={{
-                  position: 'relative',
-                  width: `${zoom * 100}%`,
-                  paddingBottom: `${zoom * 100}%`,
-                  height: 0,
-                  cursor: handMode ? 'crosshair' : 'default',
+                  position: 'absolute',
+                  inset: 0,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
+                  transformOrigin: 'center center',
                 }}
-                onClick={handleImageClick}
               >
                 <img
                   ref={imgRef}
@@ -326,23 +405,6 @@ export default function DialTest() {
                       pointerEvents: 'none',
                     }}
                   >
-                    <div
-                      style={{
-                        position: 'absolute',
-                        left: '50%',
-                        top: '50%',
-                        transform: 'translate(-50%, -50%)',
-                        width: 80,
-                        height: 80,
-                        border: '3px solid rgba(255,255,255,0.8)',
-                        borderRadius: '50%',
-                        boxShadow: '0 0 0 2px rgba(0,0,0,0.5)',
-                      }}
-                    >
-                      <span style={{ position: 'absolute', left: '50%', top: 0, bottom: 0, width: 2, background: 'rgba(255,255,255,0.8)', transform: 'translateX(-50%)' }} />
-                      <span style={{ position: 'absolute', top: '50%', left: 0, right: 0, height: 2, background: 'rgba(255,255,255,0.8)', transform: 'translateY(-50%)' }} />
-                      <span style={{ position: 'absolute', top: -10, left: '50%', transform: 'translateX(-50%)', fontSize: 12, fontWeight: 700, color: 'rgba(255,255,255,0.9)', textShadow: '0 1px 2px #000' }}>12</span>
-                    </div>
                     {centerPoint && (
                       <span
                         style={{
@@ -389,6 +451,31 @@ export default function DialTest() {
                     )}
                   </div>
                 )}
+              </div>
+              <div
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  pointerEvents: 'none',
+                }}
+              >
+                <div
+                  style={{
+                    position: 'relative',
+                    width: 'min(85vw, 85vh, 360px)',
+                    height: 'min(85vw, 85vh, 360px)',
+                    border: '5px solid #fff',
+                    borderRadius: '50%',
+                    boxShadow: '0 0 0 4px #000, 0 0 0 8px rgba(255,255,255,0.4), 0 0 40px rgba(0,0,0,0.7)',
+                  }}
+                >
+                  <span style={{ position: 'absolute', left: '50%', top: 0, bottom: 0, width: 5, background: '#fff', transform: 'translateX(-50%)', boxShadow: '0 0 8px #000' }} />
+                  <span style={{ position: 'absolute', top: '50%', left: 0, right: 0, height: 5, background: '#fff', transform: 'translateY(-50%)', boxShadow: '0 0 8px #000' }} />
+                  <span style={{ position: 'absolute', top: -24, left: '50%', transform: 'translateX(-50%)', fontSize: 24, fontWeight: 800, color: '#fff', textShadow: '0 0 6px #000, 0 0 12px #000, 0 2px 6px #000' }}>12</span>
+                </div>
               </div>
             </div>
 
@@ -441,7 +528,7 @@ export default function DialTest() {
                 type="button"
                 className="btn btn-secondary"
                 style={{ padding: '0.35rem 0.75rem', minWidth: 40 }}
-                onClick={() => setZoom((z) => Math.max(1, z - 0.5))}
+                onClick={() => setZoom((z) => Math.max(0.5, z - 0.5))}
                 aria-label="Zoom out"
               >
                 −
@@ -451,7 +538,7 @@ export default function DialTest() {
                 type="button"
                 className="btn btn-secondary"
                 style={{ padding: '0.35rem 0.75rem', minWidth: 40 }}
-                onClick={() => setZoom((z) => Math.min(4, z + 0.5))}
+                onClick={() => setZoom((z) => Math.min(6, z + 0.5))}
                 aria-label="Zoom in"
               >
                 +
@@ -463,7 +550,7 @@ export default function DialTest() {
                 ? `Tap to mark ${handMode === 'center' ? 'dial center' : handMode + ' hand'}`
                 : centerPoint && handPoints.hour && handPoints.minute && handPoints.second
                   ? 'All marked · Time shown below'
-                  : 'Align dial center with the +. 1) Mark center 2) Mark hands. Zoom, drag to pan.'}
+                  : 'Align dial center with the crosshair. Rotate if needed. 1) Mark center 2) Mark hands.'}
             </p>
 
             <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem', flexWrap: 'wrap' }}>
