@@ -69,6 +69,7 @@ export default function DialTest() {
   const imgRef = useRef(null)
   const [imgSize, setImgSize] = useState(null)
   const [orientation, setOrientation] = useState('top')
+  const [rotation, setRotation] = useState(0)
 
   const detectedTime = computeTimeFromHands(handPoints, centerPoint, orientation)
   const rawAngles = getRawAngles(handPoints, centerPoint, orientation)
@@ -111,10 +112,11 @@ export default function DialTest() {
     setHandPoints({ hour: null, minute: null, second: null })
     setHandMode(null)
     setZoom(1)
+    setRotation(0)
     e.target.value = ''
   }
 
-  /** Convert container click to image coords (0-100%). object-fit: contain. */
+  /** Convert container click to image coords (0-100%). object-fit: contain. Accounts for rotation. */
   const containerToImageCoords = useCallback((clientX, clientY) => {
     const container = containerRef.current
     const img = imgRef.current
@@ -127,12 +129,19 @@ export default function DialTest() {
     const scale = Math.min(cw / iw, ch / ih)
     const rw = iw * scale
     const rh = ih * scale
-    const ox = (cw - rw) / 2
-    const oy = (ch - rh) / 2
-    const x = ((clientX - rect.left - ox) / rw) * 100
-    const y = ((clientY - rect.top - oy) / rh) * 100
+    const cx = (cw - rw) / 2 + rw / 2
+    const cy = (ch - rh) / 2 + rh / 2
+    let px = clientX - rect.left - cx
+    let py = clientY - rect.top - cy
+    const rad = (-rotation * Math.PI) / 180
+    const cos = Math.cos(rad)
+    const sin = Math.sin(rad)
+    const ux = px * cos - py * sin
+    const uy = px * sin + py * cos
+    const x = ((ux + rw / 2) / rw) * 100
+    const y = ((uy + rh / 2) / rh) * 100
     return { x: Math.max(0, Math.min(100, x)), y: Math.max(0, Math.min(100, y)) }
-  }, [])
+  }, [rotation])
 
   const handleImageClick = (e) => {
     if (!containerRef.current || !handMode) return
@@ -189,6 +198,7 @@ export default function DialTest() {
     setHandPoints({ hour: null, minute: null, second: null })
     setHandMode(null)
     setZoom(1)
+    setRotation(0)
   }
 
 
@@ -303,6 +313,7 @@ export default function DialTest() {
                     objectFit: 'contain',
                     display: 'block',
                     pointerEvents: 'none',
+                    transform: `rotate(${rotation}deg)`,
                   }}
                 />
                 {imgSize && (
@@ -310,8 +321,8 @@ export default function DialTest() {
                     style={{
                       position: 'absolute',
                       ...(imgSize.w >= imgSize.h
-                        ? { left: 0, right: 0, top: '50%', height: `${(imgSize.h / imgSize.w) * 100}%`, transform: 'translateY(-50%)' }
-                        : { top: 0, bottom: 0, left: '50%', width: `${(imgSize.w / imgSize.h) * 100}%`, transform: 'translateX(-50%)' }),
+                        ? { left: 0, right: 0, top: '50%', height: `${(imgSize.h / imgSize.w) * 100}%`, transform: `translateY(-50%) rotate(${rotation}deg)` }
+                        : { top: 0, bottom: 0, left: '50%', width: `${(imgSize.w / imgSize.h) * 100}%`, transform: `translateX(-50%) rotate(${rotation}deg)` }),
                       pointerEvents: 'none',
                     }}
                   >
@@ -402,6 +413,28 @@ export default function DialTest() {
               </div>
             </div>
 
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.5rem', flexWrap: 'wrap' }}>
+              <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Rotate:</span>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                style={{ padding: '0.35rem 0.75rem', minWidth: 40 }}
+                onClick={() => setRotation((r) => (r - 90 + 360) % 360)}
+                aria-label="Rotate left"
+              >
+                ↶
+              </button>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                style={{ padding: '0.35rem 0.75rem', minWidth: 40 }}
+                onClick={() => setRotation((r) => (r + 90) % 360)}
+                aria-label="Rotate right"
+              >
+                ↷
+              </button>
+              <span style={{ fontSize: 13, minWidth: 40 }}>{rotation}°</span>
+            </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.5rem' }}>
               <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Zoom:</span>
               <button
