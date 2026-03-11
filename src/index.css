@@ -29,6 +29,18 @@
   --font-body: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
+/* Dial test: allow pinch/pan, block parent scroll from capturing */
+.dial-transform-wrapper {
+  touch-action: none !important;
+  -webkit-user-select: none;
+  user-select: none;
+  width: 100% !important;
+  height: 100% !important;
+}
+.dial-transform-content {
+  touch-action: none !important;
+}
+
 html, body {
   height: 100%;
   overflow: hidden;

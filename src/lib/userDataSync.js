@@ -121,16 +121,14 @@ export async function saveUserReadings(uid, reference, readings) {
 /**
  * Full sync: pull cloud data and merge with local.
  * Call on login. Cloud wins for collection; merge readings by reference.
- * If cloud has no collection but local does, caller should push local to cloud after.
+ * Always overwrite local with cloud data so switching accounts doesn't show wrong user's data.
  */
 export async function syncFromCloud(uid, getLocalCollection, getLocalReadingsForRef, setLocalCollection, setLocalReadings) {
   if (!uid) return
   const cloudCollection = await fetchUserCollection(uid)
   const cloudReadings = await fetchAllUserReadings(uid)
 
-  if (cloudCollection && cloudCollection.length > 0) {
-    setLocalCollection(cloudCollection)
-  }
+  setLocalCollection(Array.isArray(cloudCollection) ? cloudCollection : [])
 
   Object.entries(cloudReadings).forEach(([ref, items]) => {
     const parsed = items.map((r) => ({

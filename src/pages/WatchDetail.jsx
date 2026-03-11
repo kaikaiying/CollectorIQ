@@ -5,6 +5,7 @@ import { getCollection, SYNC_COMPLETE_EVENT } from '../App'
 import { getDriftReadings, deleteDriftReading, clearDriftReadings } from '../lib/driftStorage'
 import { pushReadingsToCloud } from '../lib/userDataSync'
 import { getOfficialServiceUrl } from '../lib/serviceCenters'
+import { rateBasedInSpecCount, getRecentRates } from '../lib/driftStats'
 
 export default function WatchDetail() {
   const { reference } = useParams()
@@ -48,12 +49,14 @@ export default function WatchDetail() {
 
   const min = watch.specMin ?? -999
   const max = watch.specMax ?? 999
-  const inSpec = readings.filter((r) => r.driftInSeconds >= min && r.driftInSeconds <= max).length
-  const outSpec = readings.length - inSpec
+  const { inSpecCount, rateIntervalCount } = rateBasedInSpecCount(readings, min, max)
+  const inSpec = inSpecCount
+  const outSpec = rateIntervalCount - inSpecCount
   const avg = readings.length ? readings.reduce((a, r) => a + r.driftInSeconds, 0) / readings.length : null
   const sorted = [...readings].sort((a, b) => b.timestamp - a.timestamp)
-  const recentOut = sorted.slice(0, 3).filter((r) => r.driftInSeconds < min || r.driftInSeconds > max).length
-  const suggestService = readings.length >= 2 && recentOut >= 2
+  const recentRates = getRecentRates(sorted)
+  const recentOut = recentRates.filter((r) => r < min || r > max).length
+  const suggestService = (watch.specMin != null || watch.specMax != null) && readings.length >= 2 && recentRates.length >= 2 && recentOut >= 2
   const serviceUrl = getOfficialServiceUrl(watch.brand)
 
   return (
@@ -100,14 +103,23 @@ export default function WatchDetail() {
         </div>
       )}
 
-      <div className="card">
-        <h3 className="section-title" style={{ marginTop: 0 }}>Spec compliance</h3>
-        <p style={{ fontSize: 15, color: 'var(--text-secondary)' }}>Manufacturer range: {min} to +{max} s/day</p>
-        <div style={{ display: 'flex', gap: '1rem', marginTop: '0.5rem' }}>
-          <span style={{ color: '#22c55e' }}>In spec: {inSpec}</span>
-          <span style={{ color: '#ef4444' }}>Out of spec: {outSpec}</span>
+      {(watch.specMin != null || watch.specMax != null) && (
+        <div className="card">
+          <h3 className="section-title" style={{ marginTop: 0 }}>Spec compliance (rate s/day)</h3>
+          <p style={{ fontSize: 15, color: 'var(--text-secondary)' }}>Manufacturer range: {min} to +{max} s/day</p>
+          {rateIntervalCount > 0 ? (
+            <>
+              <div style={{ display: 'flex', gap: '1rem', marginTop: '0.5rem' }}>
+                <span style={{ color: '#22c55e' }}>In spec: {inSpec}</span>
+                <span style={{ color: '#ef4444' }}>Out of spec: {outSpec}</span>
+              </div>
+              <p style={{ fontSize: 13, color: 'var(--text-tertiary)', margin: '0.25rem 0 0' }}>{rateIntervalCount} intervals</p>
+            </>
+          ) : (
+            <p style={{ fontSize: 15, color: 'var(--text-secondary)', marginTop: '0.5rem 0 0' }}>Need at least 2 readings to compute rate.</p>
+          )}
         </div>
-      </div>
+      )}
 
       {avg !== null && (
         <div className="card">

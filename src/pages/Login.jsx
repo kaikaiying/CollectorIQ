@@ -94,8 +94,7 @@ export default function Login() {
       <div className="login-logo-wrap">
         <img src={`${import.meta.env.BASE_URL}logo.png`} alt="Collector IQ" className="login-logo" />
       </div>
-      <h1 className="login-headline">Watch accuracy tracking that holds brands accountable</h1>
-      <p className="login-tagline">Measure precision. Compare to specs. See real-world data.</p>
+      <h1 className="login-headline">Measure precision. Compare to specs. See real-world data.</h1>
       <ul className="login-how">
         <li><strong>Test your accuracy</strong> — compare your watch to atomic time and official specs</li>
         <li><strong>See how it stacks up</strong> — real-world performance from the watch community</li>

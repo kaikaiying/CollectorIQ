@@ -1,6 +1,6 @@
 const MIN_READINGS_FOR_COMMUNITY_STATS = 3 // Don't show exact mean below this to protect user privacy
 
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { usePageTitle } from '../contexts/PageTitleContext'
 import { getCollection, SYNC_COMPLETE_EVENT } from '../App'
@@ -10,6 +10,7 @@ import { pushReadingsToCloud } from '../lib/userDataSync'
 import { uploadDriftReading, fetchAggregates } from '../lib/driftCloud'
 import { fetchAtomicTimeOrDevice } from '../lib/atomicTime'
 import { formatLocalTime, getTimezoneLabel } from '../lib/timezone'
+import { rateBasedInSpecCount } from '../lib/driftStats'
 
 function getNextTargetMinute() {
   const now = new Date()
@@ -133,10 +134,11 @@ export default function DriftTest() {
   const [targetTime, setTargetTime] = useState(null)
   const [countdown, setCountdown] = useState(null)
   const [result, setResult] = useState(null)
-  const [syncing, setSyncing] = useState(false)
   const [readings, setReadings] = useState([])
   const [communityAgg, setCommunityAgg] = useState(null)
   const [referenceTime, setReferenceTime] = useState(null) // { serverDate, deviceAtFetch } for live reference
+  const [, setTick] = useState(0) // force re-render every second so reference time display updates
+  const tapLockRef = useRef(false)
 
   const selectedWatch = watches.find((w) => w.reference === selectedRef)
 
@@ -168,10 +170,11 @@ export default function DriftTest() {
     const median = n % 2 === 1 ? drifts[(n - 1) / 2] : (drifts[n / 2 - 1] + drifts[n / 2]) / 2
     const specMin = selectedWatch?.specMin ?? -999
     const specMax = selectedWatch?.specMax ?? 999
-    const inSpecCount = readings.filter((r) => r.driftInSeconds >= specMin && r.driftInSeconds <= specMax).length
+    const { inSpecCount, rateIntervalCount } = rateBasedInSpecCount(readings, specMin, specMax)
     return {
       mean, std, meanRate, rateStd, n, min, max, median,
       inSpecCount,
+      rateIntervalCount,
       specMin,
       specMax,
     }
@@ -233,17 +236,39 @@ export default function DriftTest() {
     return () => clearInterval(id)
   }, [targetTime])
 
-  // Fetch reference (atomic/server) time for display; refresh every 30s
+  // Fetch reference (atomic/server) time; refresh every 20s and when target/countdown changes
   useEffect(() => {
     let cancelled = false
     const fetchRef = () => {
-      fetchAtomicTimeOrDevice().then(({ date }) => {
-        if (!cancelled) setReferenceTime({ serverDate: date, deviceAtFetch: new Date() })
+      fetchAtomicTimeOrDevice().then(({ date, fromServer }) => {
+        if (!cancelled) setReferenceTime({ serverDate: date, deviceAtFetch: new Date(), fromServer })
       }).catch(() => {})
     }
     fetchRef()
-    const id = setInterval(fetchRef, 30000)
+    const id = setInterval(fetchRef, 20000)
     return () => { cancelled = true; clearInterval(id) }
+  }, [])
+
+  // Refresh when target is set and when countdown hits 20s so tap always has fresh reference
+  useEffect(() => {
+    if (!targetTime) return
+    fetchAtomicTimeOrDevice().then(({ date, fromServer }) => {
+      setReferenceTime({ serverDate: date, deviceAtFetch: new Date(), fromServer })
+    }).catch(() => {})
+  }, [targetTime?.getTime()])
+
+  useEffect(() => {
+    if (countdown === 20) {
+      fetchAtomicTimeOrDevice().then(({ date, fromServer }) => {
+        setReferenceTime({ serverDate: date, deviceAtFetch: new Date(), fromServer })
+      }).catch(() => {})
+    }
+  }, [countdown])
+
+  // Tick every second so reference time display updates continuously
+  useEffect(() => {
+    const id = setInterval(() => setTick((t) => t + 1), 1000)
+    return () => clearInterval(id)
   }, [])
 
   // Live-updating reference time (server time + elapsed since last fetch)
@@ -298,36 +323,26 @@ export default function DriftTest() {
     }
   }
 
-  const handleTap = async () => {
-    if (!selectedWatch || syncing) return
-    setSyncing(true)
+  const handleTap = () => {
+    if (!selectedWatch || !referenceTime || tapLockRef.current) return
+    tapLockRef.current = true
     setResult(null)
-    try {
-      const { date: atomicAtTap, fromServer } = await fetchAtomicTimeOrDevice()
-      /* Positive = watch fast (ahead of actual). Negative = watch slow (behind). */
-      const driftSeconds = (targetTime - atomicAtTap) / 1000
-      addDriftReading(selectedWatch.reference, driftSeconds, atomicAtTap)
-      const updated = getDriftReadings(selectedWatch.reference)
-      setReadings(updated)
+    const atomicAtTap = new Date(referenceTime.serverDate.getTime() + (Date.now() - referenceTime.deviceAtFetch.getTime()))
+    const driftSeconds = (targetTime - atomicAtTap) / 1000
+    addDriftReading(selectedWatch.reference, driftSeconds, atomicAtTap)
+    const updated = getDriftReadings(selectedWatch.reference)
+    setReadings(updated)
+    setResult({ drift: driftSeconds, fromServer: referenceTime.fromServer !== false })
+    setNewTarget()
+    queueMicrotask(() => {
       pushReadingsToCloud(selectedWatch.reference, updated).catch(() => {})
       uploadDriftReading(
-        {
-          reference: selectedWatch.reference,
-          brand: selectedWatch.brand,
-          model: selectedWatch.model,
-          specMin: selectedWatch.specMin,
-          specMax: selectedWatch.specMax,
-        },
+        { reference: selectedWatch.reference, brand: selectedWatch.brand, model: selectedWatch.model, specMin: selectedWatch.specMin, specMax: selectedWatch.specMax },
         driftSeconds,
         atomicAtTap
       ).catch(() => {})
-      setResult({ drift: driftSeconds, fromServer })
-      setNewTarget()
-    } catch (err) {
-      setResult({ error: 'Something went wrong. Try again.' })
-    } finally {
-      setSyncing(false)
-    }
+    })
+    setTimeout(() => { tapLockRef.current = false }, 80)
   }
 
   if (watches.length === 0) {
@@ -389,16 +404,16 @@ export default function DriftTest() {
         )}
         <p className="tz-label" style={{ margin: 0 }}>{getTimezoneLabel()}</p>
         {nowRef && (
-          <p className="drift-reference-time" style={{ margin: '0.5rem 0 0' }}>
-            Reference time: <strong>{pad(nowRef.getHours())}:{pad(nowRef.getMinutes())}:{pad(nowRef.getSeconds())}</strong>
+          <p className="drift-reference-time" style={{ margin: '0.5rem 0 0', fontVariantNumeric: 'tabular-nums' }}>
+            Atomic clock: <strong>{pad(nowRef.getHours())}:{pad(nowRef.getMinutes())}:{pad(nowRef.getSeconds())}</strong>
           </p>
         )}
         {countdown !== null && countdown > 0 && <p className="countdown">in {countdown} s</p>}
         {countdown === 0 && <p className="tap-now">Tap now</p>}
       </div>
 
-      <button type="button" className="btn" style={{ width: '100%', minHeight: 56, fontSize: '1.1rem' }} onClick={handleTap} disabled={syncing}>
-        {syncing ? 'Syncing…' : 'Tap'}
+      <button type="button" className="btn" style={{ width: '100%', minHeight: 56, fontSize: '1.1rem' }} onClick={handleTap} disabled={!referenceTime}>
+        Tap
       </button>
       <button type="button" className="btn btn-secondary" style={{ width: '100%', marginTop: '0.5rem' }} onClick={setNewTarget}>
         New target time
@@ -433,11 +448,11 @@ export default function DriftTest() {
             </tbody>
           </table>
 
-          {selectedWatch && (selectedWatch.specMin != null || selectedWatch.specMax != null) && (
+          {selectedWatch && (selectedWatch.specMin != null || selectedWatch.specMax != null) && driftStats.rateIntervalCount > 0 && (
             <div className="drift-spec-block">
-              <h3 className="drift-spec-title">Spec compliance</h3>
+              <h3 className="drift-spec-title">Spec compliance (rate s/day)</h3>
               <p className="drift-spec-range">Manufacturer: {driftStats.specMin} to +{driftStats.specMax} s/day</p>
-              <p className="drift-spec-count"><strong>{driftStats.inSpecCount} / {driftStats.n}</strong> readings within spec ({Math.round((driftStats.inSpecCount / driftStats.n) * 100)}%)</p>
+              <p className="drift-spec-count"><strong>{driftStats.inSpecCount} / {driftStats.rateIntervalCount}</strong> intervals within spec ({Math.round((driftStats.inSpecCount / driftStats.rateIntervalCount) * 100)}%)</p>
             </div>
           )}
 

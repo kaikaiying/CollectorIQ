@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react'
 import { getCollection } from '../App'
 import { getDriftReadings } from '../lib/driftStorage'
+import { rateBasedInSpecCount } from '../lib/driftStats'
 import { fetchAggregates } from '../lib/driftCloud'
 import { useAuth } from '../contexts/AuthContext'
 import PageSeo from '../components/PageSeo'
@@ -18,9 +19,9 @@ function buildContext(watches, communityByRef) {
     const n = readings.length
     const specMin = w.specMin ?? -999
     const specMax = w.specMax ?? 999
-    const inSpecCount = readings.filter((r) => r.driftInSeconds >= specMin && r.driftInSeconds <= specMax).length
+    const { inSpecCount, rateIntervalCount } = rateBasedInSpecCount(readings, specMin, specMax)
     const mean = n > 0 ? readings.reduce((a, r) => a + r.driftInSeconds, 0) / n : null
-    const inSpecPct = n > 0 ? Math.round((inSpecCount / n) * 100) : null
+    const inSpecPct = rateIntervalCount > 0 ? Math.round((inSpecCount / rateIntervalCount) * 100) : null
     const agg = communityByRef[w.reference]
     const communityMean = agg?.readingCount > 0 ? agg.sumDrift / agg.readingCount : null
     drift.push({

@@ -3,6 +3,8 @@
  * Train by marking hands 5 times (1 per day). Data aggregates across users.
  */
 import { useState, useRef, useCallback, useEffect } from 'react'
+import { createPortal } from 'react-dom'
+import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch'
 import { usePageTitle } from '../contexts/PageTitleContext'
 import { getCollection, SYNC_COMPLETE_EVENT } from '../App'
 import { getCalibrations, canAddCalibration, saveCalibration } from '../lib/dialCalibration'
@@ -62,16 +64,15 @@ export default function DialTest() {
   const [handMode, setHandMode] = useState(null) // 'center' | 'hour' | 'minute' | 'second' | null
   const [centerPoint, setCenterPoint] = useState(null)
   const [handPoints, setHandPoints] = useState({ hour: null, minute: null, second: null })
-  const [zoom, setZoom] = useState(1)
-  const lastPinchRef = useRef(null)
   const fileInputRef = useRef(null)
   const containerRef = useRef(null)
   const imgRef = useRef(null)
   const [imgSize, setImgSize] = useState(null)
   const [orientation, setOrientation] = useState('top')
   const [rotation, setRotation] = useState(0)
-  const [pan, setPan] = useState({ x: 0, y: 0 })
-  const panStartRef = useRef(null)
+  const transformStateRef = useRef({ scale: 1, positionX: 0, positionY: 0 })
+  const [zoomDisplay, setZoomDisplay] = useState(1)
+  const transformRef = useRef(null)
 
   const detectedTime = computeTimeFromHands(handPoints, centerPoint, orientation)
   const rawAngles = getRawAngles(handPoints, centerPoint, orientation)
@@ -113,13 +114,11 @@ export default function DialTest() {
     setCenterPoint(null)
     setHandPoints({ hour: null, minute: null, second: null })
     setHandMode(null)
-    setZoom(1)
     setRotation(0)
-    setPan({ x: 0, y: 0 })
     e.target.value = ''
   }
 
-  /** Convert container click to image coords (0-100%). Accounts for zoom, pan, rotation. */
+  /** Convert container click to image coords (0-100%). Accounts for transform and rotation. */
   const containerToImageCoords = useCallback((clientX, clientY) => {
     const container = containerRef.current
     const img = imgRef.current
@@ -129,13 +128,14 @@ export default function DialTest() {
     const ch = rect.height
     const iw = img.naturalWidth
     const ih = img.naturalHeight
-    const scale = Math.min(cw / iw, ch / ih)
-    const rw = iw * scale
-    const rh = ih * scale
-    const cx = rect.left + cw / 2 + pan.x
-    const cy = rect.top + ch / 2 + pan.y
-    let px = (clientX - cx) / zoom
-    let py = (clientY - cy) / zoom
+    const baseScale = Math.min(cw / iw, ch / ih)
+    const rw = iw * baseScale
+    const rh = ih * baseScale
+    const { scale, positionX, positionY } = transformStateRef.current
+    const cx = rect.left + cw / 2 + positionX
+    const cy = rect.top + ch / 2 + positionY
+    let px = (clientX - cx) / scale
+    let py = (clientY - cy) / scale
     const rad = (-rotation * Math.PI) / 180
     const cos = Math.cos(rad)
     const sin = Math.sin(rad)
@@ -144,7 +144,7 @@ export default function DialTest() {
     const x = ((ux + rw / 2) / rw) * 100
     const y = ((uy + rh / 2) / rh) * 100
     return { x: Math.max(0, Math.min(100, x)), y: Math.max(0, Math.min(100, y)) }
-  }, [rotation, zoom, pan.x, pan.y])
+  }, [rotation])
 
   const handleImageClick = (e) => {
     if (!containerRef.current || !handMode) return
@@ -161,109 +161,13 @@ export default function DialTest() {
     }
   }
 
-  const handlePinch = useCallback((e) => {
-    if (e.touches?.length === 2) {
-      e.preventDefault()
-      const d = Math.hypot(
-        e.touches[1].clientX - e.touches[0].clientX,
-        e.touches[1].clientY - e.touches[0].clientY
-      )
-      if (lastPinchRef.current != null) {
-        const delta = (d - lastPinchRef.current) / 80
-        setZoom((z) => Math.max(0.5, Math.min(6, z + delta)))
-      }
-      lastPinchRef.current = d
-    }
-  }, [])
-
-  const handleTouchStart = useCallback((e) => {
-    if (e.touches?.length === 1 && !handMode) {
-      panStartRef.current = { x: e.touches[0].clientX - pan.x, y: e.touches[0].clientY - pan.y }
-    }
-  }, [pan.x, pan.y, handMode])
-
-  const handleTouchMove = useCallback((e) => {
-    if (e.touches?.length === 2) {
-      handlePinch(e)
-    }
-  }, [handlePinch])
-
-  const handleTouchEnd = useCallback((e) => {
-    if (e.touches?.length < 2) lastPinchRef.current = null
-    if (e.touches?.length === 0) panStartRef.current = null
-  }, [])
-
-  const handleMouseDown = useCallback((e) => {
-    if (e.button === 0 && !handMode) panStartRef.current = { x: e.clientX - pan.x, y: e.clientY - pan.y }
-  }, [pan.x, pan.y, handMode])
-
-  const handleMouseMove = useCallback((e) => {
-    if (e.buttons === 1 && panStartRef.current) {
-      setPan({ x: e.clientX - panStartRef.current.x, y: e.clientY - panStartRef.current.y })
-    }
-  }, [])
-
-  const handleMouseUp = useCallback(() => {
-    panStartRef.current = null
-  }, [])
-
-  useEffect(() => {
-    const el = containerRef.current
-    if (!el) return
-    el.addEventListener('touchstart', handleTouchStart, { passive: true, capture: true })
-    el.addEventListener('touchmove', handleTouchMove, { passive: false, capture: true })
-    el.addEventListener('touchend', handleTouchEnd)
-    el.addEventListener('touchcancel', handleTouchEnd)
-    return () => {
-      el.removeEventListener('touchstart', handleTouchStart)
-      el.removeEventListener('touchmove', handleTouchMove)
-      el.removeEventListener('touchend', handleTouchEnd)
-      el.removeEventListener('touchcancel', handleTouchEnd)
-    }
-  }, [handleTouchStart, handleTouchMove, handleTouchEnd])
-
-  useEffect(() => {
-    const onMove = (e) => {
-      if (panStartRef.current && e.touches?.length === 1) {
-        e.preventDefault()
-        e.stopPropagation()
-        setPan({
-          x: e.touches[0].clientX - panStartRef.current.x,
-          y: e.touches[0].clientY - panStartRef.current.y,
-        })
-      }
-    }
-    const onEnd = (e) => {
-      if (e.touches?.length === 0) panStartRef.current = null
-    }
-    document.addEventListener('touchmove', onMove, { passive: false, capture: true })
-    document.addEventListener('touchend', onEnd, { capture: true })
-    document.addEventListener('touchcancel', onEnd, { capture: true })
-    return () => {
-      document.removeEventListener('touchmove', onMove, { capture: true })
-      document.removeEventListener('touchend', onEnd, { capture: true })
-      document.removeEventListener('touchcancel', onEnd, { capture: true })
-    }
-  }, [])
-
-  useEffect(() => {
-    window.addEventListener('mousemove', handleMouseMove)
-    window.addEventListener('mouseup', handleMouseUp)
-    return () => {
-      window.removeEventListener('mousemove', handleMouseMove)
-      window.removeEventListener('mouseup', handleMouseUp)
-    }
-  }, [handleMouseMove, handleMouseUp])
-
   const clearImage = () => {
     if (imageUrl) URL.revokeObjectURL(imageUrl)
     setImageUrl(null)
     setCenterPoint(null)
     setHandPoints({ hour: null, minute: null, second: null })
     setHandMode(null)
-    setZoom(1)
     setRotation(0)
-    setPan({ x: 0, y: 0 })
   }
 
 
@@ -342,40 +246,44 @@ export default function DialTest() {
             <p style={{ margin: '0 0 0.5rem', fontSize: 13, color: 'var(--text-secondary)', fontWeight: 500 }}>
               Pinch to zoom, drag to pan. Align dial center with the crosshair.
             </p>
-            <div
-              ref={containerRef}
-              onClick={handleImageClick}
-              onTouchStart={handleTouchStart}
-              onMouseDown={handleMouseDown}
-              onMouseLeave={handleMouseUp}
-              style={{
-                position: 'relative',
-                width: '100%',
-                height: '70vh',
-                minHeight: 320,
-                maxHeight: 500,
-                borderRadius: 'var(--radius-sm)',
-                background: '#000',
-                overflow: 'hidden',
-                touchAction: 'none',
-                WebkitTouchCallout: 'none',
-                WebkitUserSelect: 'none',
-                userSelect: 'none',
-                cursor: handMode ? 'crosshair' : 'grab',
-              }}
-            >
+            {createPortal(
               <div
+                ref={containerRef}
+                onClick={handleImageClick}
                 style={{
-                  position: 'absolute',
+                  position: 'fixed',
                   inset: 0,
+                  zIndex: 99999,
+                  background: '#000',
                   display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
-                  transformOrigin: 'center center',
+                  flexDirection: 'column',
+                  cursor: handMode ? 'crosshair' : 'default',
+                  touchAction: 'none',
+                  WebkitUserSelect: 'none',
+                  userSelect: 'none',
                 }}
               >
-                <img
+                <div style={{ flex: 1, minHeight: 0, position: 'relative' }}>
+              <TransformWrapper
+                ref={transformRef}
+                initialScale={1}
+                minScale={0.5}
+                maxScale={6}
+                centerOnInit
+                wrapperClass="dial-transform-wrapper"
+                contentClass="dial-transform-content"
+                onTransformed={(_, state) => {
+                  transformStateRef.current = { scale: state.scale, positionX: state.positionX, positionY: state.positionY }
+                  setZoomDisplay(state.scale)
+                }}
+                panning={{ velocityDisabled: true, disabled: !!handMode, allowLeftClickPan: true }}
+                doubleClick={{ disabled: true }}
+              >
+                <TransformComponent
+                  wrapperStyle={{ width: '100%', height: '100%', minHeight: 200 }}
+                  contentStyle={{ width: '100%', height: '100%', minHeight: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                >
+                  <img
                   ref={imgRef}
                   src={imageUrl}
                   alt="Watch dial"
@@ -451,7 +359,8 @@ export default function DialTest() {
                     )}
                   </div>
                 )}
-              </div>
+                </TransformComponent>
+              </TransformWrapper>
               <div
                 style={{
                   position: 'absolute',
@@ -477,9 +386,9 @@ export default function DialTest() {
                   <span style={{ position: 'absolute', top: -24, left: '50%', transform: 'translateX(-50%)', fontSize: 24, fontWeight: 800, color: '#fff', textShadow: '0 0 6px #000, 0 0 12px #000, 0 2px 6px #000' }}>12</span>
                 </div>
               </div>
-            </div>
-
-            <div style={{ marginTop: '0.5rem' }}>
+                </div>
+                <div style={{ padding: '1rem', background: 'var(--bg-elevated)', borderTop: '1px solid var(--border)', overflowY: 'auto', maxHeight: '40vh' }}>
+            <div style={{ marginTop: '0' }}>
               <p className="label" style={{ marginBottom: '0.25rem', fontSize: 13 }}>12 o'clock is at</p>
               <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
                 {['top', 'right', 'bottom', 'left'].map((o) => (
@@ -528,17 +437,17 @@ export default function DialTest() {
                 type="button"
                 className="btn btn-secondary"
                 style={{ padding: '0.35rem 0.75rem', minWidth: 40 }}
-                onClick={() => setZoom((z) => Math.max(0.5, z - 0.5))}
+                onClick={() => transformRef.current?.zoomOut()}
                 aria-label="Zoom out"
               >
                 −
               </button>
-              <span style={{ fontSize: 13, minWidth: 36, textAlign: 'center' }}>{zoom.toFixed(1)}×</span>
+              <span style={{ fontSize: 13, minWidth: 36, textAlign: 'center' }}>{zoomDisplay.toFixed(1)}×</span>
               <button
                 type="button"
                 className="btn btn-secondary"
                 style={{ padding: '0.35rem 0.75rem', minWidth: 40 }}
-                onClick={() => setZoom((z) => Math.min(6, z + 0.5))}
+                onClick={() => transformRef.current?.zoomIn()}
                 aria-label="Zoom in"
               >
                 +
@@ -591,6 +500,10 @@ export default function DialTest() {
                     ? '5/5 done. This model is trained.'
                     : `Next in ~${Math.ceil((calibrationStatus.nextInMinutes || 0) / 60)}h`}
               </p>
+            )}
+                </div>
+              </div>,
+              document.body
             )}
           </>
         )}

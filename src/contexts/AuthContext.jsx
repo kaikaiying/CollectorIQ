@@ -14,6 +14,7 @@ import {
 import { Capacitor } from '@capacitor/core'
 import { FirebaseAuthentication } from '@capacitor-firebase/authentication'
 import { auth } from '../firebase'
+import { clearLocalUserData } from '../lib/clearLocalUserData'
 
 const AuthContext = createContext(null)
 
@@ -98,6 +99,7 @@ export function AuthProvider({ children }) {
 
   const signOut = async () => {
     if (!auth) return
+    clearLocalUserData()
     if (Capacitor.isNativePlatform()) {
       await FirebaseAuthentication.signOut()
     }
