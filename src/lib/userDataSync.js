@@ -4,6 +4,7 @@
  */
 
 import { auth, db } from '../firebase'
+import { clearLocalUserData, LAST_UID_KEY } from './clearLocalUserData'
 import {
   doc,
   getDoc,
@@ -27,18 +28,19 @@ function docIdToRef(docId) {
 }
 
 /**
- * Fetch user's collection from cloud. Returns null if not found or error.
+ * Fetch user's collection from cloud.
+ * @returns {{ ok: true, data: array } | { ok: false }} - ok:false means fetch failed (don't overwrite local)
  */
 export async function fetchUserCollection(uid) {
-  if (!db || !uid) return null
+  if (!db || !uid) return { ok: false }
   try {
     const ref = doc(db, USER_DATA, uid)
     const snap = await getDoc(ref)
     const data = snap?.data()
     const list = data?.collection
-    return Array.isArray(list) ? list : null
+    return { ok: true, data: Array.isArray(list) ? list : [] }
   } catch {
-    return null
+    return { ok: false }
   }
 }
 
@@ -119,16 +121,35 @@ export async function saveUserReadings(uid, reference, readings) {
 }
 
 /**
- * Full sync: pull cloud data and merge with local.
- * Call on login. Cloud wins for collection; merge readings by reference.
- * Always overwrite local with cloud data so switching accounts doesn't show wrong user's data.
+ * Full sync: load current user's data from cloud on login.
+ * Cloud is source of truth. Each user only sees their own collection + readings.
+ * - Different user: clear local first, then load their cloud data
+ * - Same user: load their cloud data (overwrites local)
+ * - Cloud empty + local has data: push local to cloud (first-time sync)
  */
 export async function syncFromCloud(uid, getLocalCollection, getLocalReadingsForRef, setLocalCollection, setLocalReadings) {
   if (!uid) return
-  const cloudCollection = await fetchUserCollection(uid)
+  const lastUid = typeof localStorage !== 'undefined' ? localStorage.getItem(LAST_UID_KEY) : null
+  if (lastUid && lastUid !== uid) {
+    clearLocalUserData()
+  }
+  if (typeof localStorage !== 'undefined') localStorage.setItem(LAST_UID_KEY, uid)
+
+  const cloudResult = await fetchUserCollection(uid)
   const cloudReadings = await fetchAllUserReadings(uid)
 
-  setLocalCollection(Array.isArray(cloudCollection) ? cloudCollection : [])
+  if (cloudResult.ok) {
+    if (cloudResult.data.length > 0) {
+      setLocalCollection(cloudResult.data)
+    } else {
+      const local = getLocalCollection()
+      if (local.length > 0) {
+        await saveUserCollection(uid, local)
+      } else {
+        setLocalCollection([])
+      }
+    }
+  }
 
   Object.entries(cloudReadings).forEach(([ref, items]) => {
     const parsed = items.map((r) => ({

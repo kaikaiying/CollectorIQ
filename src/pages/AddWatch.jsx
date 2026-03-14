@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { getCollection, setCollection } from '../App'
 import { useAuth } from '../contexts/AuthContext'
 import { getSubscriptionStatus, FIRST_WATCH_FREE, SUBSCRIPTION_PRICE_DISPLAY, SUBSCRIPTION_TERMS_IAP, SUBSCRIPTION_TERMS_STRIPE } from '../lib/subscription'
@@ -37,6 +37,8 @@ export default function AddWatch() {
   const [restoreLoading, setRestoreLoading] = useState(false)
   const [iapPrice, setIapPrice] = useState(null)
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const refFromUrl = searchParams.get('ref')
   const collectionLength = getCollection().length
   const needsSubscription = collectionLength >= FIRST_WATCH_FREE
 
@@ -134,13 +136,25 @@ export default function AddWatch() {
       .catch(() => [])
       .then((data) => {
         setSpecs(Array.isArray(data) ? data : [])
-        if (data?.length && !brand) {
-          const brands = [...new Set(data.map((w) => w.brand))].sort()
-          setBrand(brands[0] || '')
+        if (data?.length) {
+          if (refFromUrl) {
+            const match = data.find((w) => w.reference === refFromUrl)
+            if (match) {
+              setBrand(match.brand)
+              setModel(match.model)
+              setReference(match.reference)
+            } else {
+              const brands = [...new Set(data.map((w) => w.brand))].sort()
+              setBrand(brands[0] || '')
+            }
+          } else if (!brand) {
+            const brands = [...new Set(data.map((w) => w.brand))].sort()
+            setBrand(brands[0] || '')
+          }
         }
         setLoading(false)
       })
-  }, [])
+  }, [refFromUrl])
 
   const brands = [...new Set(specs.map((w) => w.brand))].sort()
   const models = brand ? [...new Set(specs.filter((w) => w.brand === brand).map((w) => w.model))].sort() : []
@@ -235,7 +249,6 @@ export default function AddWatch() {
             <button
               type="button"
               className="btn"
-              style={{ width: '100%' }}
               onClick={() => startCheckout('monthly')}
               disabled={checkoutLoading}
             >
@@ -245,7 +258,6 @@ export default function AddWatch() {
               <button
                 type="button"
                 className="btn btn-secondary"
-                style={{ width: '100%' }}
                 onClick={handleRestore}
                 disabled={restoreLoading}
               >

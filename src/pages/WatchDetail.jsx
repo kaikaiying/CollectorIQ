@@ -5,7 +5,7 @@ import { getCollection, SYNC_COMPLETE_EVENT } from '../App'
 import { getDriftReadings, deleteDriftReading, clearDriftReadings } from '../lib/driftStorage'
 import { pushReadingsToCloud } from '../lib/userDataSync'
 import { getOfficialServiceUrl } from '../lib/serviceCenters'
-import { rateBasedInSpecCount, getRecentRates } from '../lib/driftStats'
+import { rateBasedInSpecCount, getRecentRates, getReadingsWithRates, getRates } from '../lib/driftStats'
 
 export default function WatchDetail() {
   const { reference } = useParams()
@@ -110,8 +110,8 @@ export default function WatchDetail() {
           {rateIntervalCount > 0 ? (
             <>
               <div style={{ display: 'flex', gap: '1rem', marginTop: '0.5rem' }}>
-                <span style={{ color: '#22c55e' }}>In spec: {inSpec}</span>
-                <span style={{ color: '#ef4444' }}>Out of spec: {outSpec}</span>
+                <span style={{ color: 'var(--success)' }}>In spec: {inSpec}</span>
+                <span style={{ color: 'var(--danger)' }}>Out of spec: {outSpec}</span>
               </div>
               <p style={{ fontSize: 13, color: 'var(--text-tertiary)', margin: '0.25rem 0 0' }}>{rateIntervalCount} intervals</p>
             </>
@@ -121,9 +121,14 @@ export default function WatchDetail() {
         </div>
       )}
 
-      {avg !== null && (
+      {readings.length > 0 && (
         <div className="card">
-          <p><strong>Average drift</strong> (from {readings.length} reading{readings.length !== 1 ? 's' : ''}): {avg >= 0 ? '+' : ''}{avg.toFixed(1)} s</p>
+          {readings.length >= 2 && (() => {
+            const rates = getRates(readings)
+            const meanRate = rates.length ? rates.reduce((a, b) => a + b, 0) / rates.length : null
+            return meanRate != null && <p style={{ margin: 0, fontSize: 15 }}><strong>Mean rate:</strong> {meanRate >= 0 ? '+' : ''}{meanRate.toFixed(1)} s/day</p>
+          })()}
+          <p style={{ margin: readings.length >= 2 ? '0.25rem 0 0' : 0, fontSize: 15 }}><strong>Average drift</strong> (from {readings.length} reading{readings.length !== 1 ? 's' : ''}): {avg >= 0 ? '+' : ''}{avg.toFixed(1)} s</p>
         </div>
       )}
 
@@ -146,16 +151,28 @@ export default function WatchDetail() {
           <p style={{ color: 'var(--text-secondary)' }}>No readings yet. Run a drift test.</p>
         ) : (
           <>
-          <p style={{ fontSize: 13, color: 'var(--text-tertiary)', margin: '0 0 0.75rem' }}>
-            Synced to atomic time or had a service? Use &quot;Corrected watch — reset&quot; to clear old readings and track from your new baseline.
+          <p style={{ fontSize: 13, color: 'var(--text-tertiary)', margin: '0 0 1rem' }}>
+            Synced to atomic time or had a service? Use &quot;Corrected watch — reset&quot; to clear old readings.
           </p>
-          <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-            {sorted.slice(0, 20).map((r) => (
-              <li key={r.id} className="drift-history-row">
-                <span className="drift-history-meta">{r.timestamp.toLocaleDateString()} {r.timestamp.toLocaleTimeString()}</span>
-                <span className="drift-history-value" style={{ color: r.driftInSeconds < min || r.driftInSeconds > max ? 'var(--danger)' : '#22c55e' }}>
-                  {r.driftInSeconds >= 0 ? '+' : ''}{r.driftInSeconds.toFixed(1)} s
+          <div className="drift-history-table">
+            <div className="drift-history-header">
+              <span>Date</span>
+              <span>Rate (s/day)</span>
+              <span>Drift (s)</span>
+              <span />
+            </div>
+            {getReadingsWithRates(sorted, min, max).slice(0, 20).map(({ reading: r, rate, inSpec }) => (
+              <div key={r.id} className="drift-history-row">
+                <span className="drift-history-date">{r.timestamp.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })} {r.timestamp.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}</span>
+                <span
+                  className="drift-history-rate"
+                  style={{
+                    color: rate != null && inSpec === false ? 'var(--danger)' : rate != null && inSpec === true ? 'var(--success)' : 'var(--text-secondary)',
+                  }}
+                >
+                  {rate != null ? `${rate >= 0 ? '+' : ''}${rate.toFixed(1)} s/day` : '—'}
                 </span>
+                <span className="drift-history-drift">{r.driftInSeconds >= 0 ? '+' : ''}{r.driftInSeconds.toFixed(1)} s</span>
                 <button
                   type="button"
                   className="drift-history-delete"
@@ -165,14 +182,13 @@ export default function WatchDetail() {
                     setReadings(updated)
                     pushReadingsToCloud(reference, updated).catch(() => {})
                   }}
-                  aria-label="Delete this reading"
-                  title="Delete reading"
+                  aria-label="Delete"
                 >
                   Delete
                 </button>
-              </li>
+              </div>
             ))}
-          </ul>
+          </div>
           </>
         )}
       </div>

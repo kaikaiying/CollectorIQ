@@ -54,6 +54,7 @@ The following API routes are deployed with the frontend on Vercel:
 - `POST /api/create-checkout-session` — Creates Stripe Checkout session (requires Firebase ID token)
 - `POST /api/stripe-webhook` — Handles Stripe events, updates Firestore `users/{uid}`
 - `POST /api/create-portal-session` — Creates Stripe Customer Portal for managing subscription
+- `POST /api/upload-reading` — Uploads drift reading, recomputes aggregate with outlier removal (IQR) and median (requires Firebase ID token)
 
 The `vercel.json` rewrite excludes `/api/*` so these routes are served correctly.
 

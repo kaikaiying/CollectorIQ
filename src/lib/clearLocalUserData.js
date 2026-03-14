@@ -6,11 +6,13 @@
 const COLLECTION_KEY = 'collectoriq_collection'
 const DRIFT_PREFIX = 'collectoriq_drift_'
 const DIAL_CALIBRATIONS_KEY = 'collectoriq_dial_calibrations'
+export const LAST_UID_KEY = 'collectoriq_last_uid'
 
 export function clearLocalUserData() {
   try {
     localStorage.removeItem(COLLECTION_KEY)
     localStorage.removeItem(DIAL_CALIBRATIONS_KEY)
+    localStorage.removeItem(LAST_UID_KEY)
     const keys = Object.keys(localStorage)
     keys.forEach((key) => {
       if (key.startsWith(DRIFT_PREFIX)) localStorage.removeItem(key)

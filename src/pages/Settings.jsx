@@ -110,7 +110,7 @@ export default function Settings() {
         ) : (
           <>
             <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: 15 }}>First watch free. $6.99/mo for more.</p>
-            <Link to="/subscribe" className="btn" style={{ width: '100%', marginTop: '0.75rem', display: 'block', textAlign: 'center' }}>
+            <Link to="/subscribe" className="btn" style={{ width: '100%', marginTop: '0.75rem' }}>
               Subscribe
             </Link>
           </>

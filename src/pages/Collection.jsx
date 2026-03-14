@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
+import { useState, useEffect, useCallback } from 'react'
+import { Link, useSearchParams, useLocation } from 'react-router-dom'
 import { getCollection, setCollection, SYNC_COMPLETE_EVENT } from '../App'
 import PageSeo from '../components/PageSeo'
 import { useAuth } from '../contexts/AuthContext'
@@ -8,6 +8,7 @@ import { getSubscriptionStatus, SUBSCRIPTION_PRICE_DISPLAY } from '../lib/subscr
 
 export default function Collection() {
   const { user } = useAuth()
+  const location = useLocation()
   usePageTitle('Collection')
   const [searchParams, setSearchParams] = useSearchParams()
   const [subscriptionSuccess, setSubscriptionSuccess] = useState(false)
@@ -15,12 +16,23 @@ export default function Collection() {
   const [hasActiveSubscription, setHasActiveSubscription] = useState(false)
   const [subLoading, setSubLoading] = useState(true)
 
+  const refreshWatches = useCallback(() => setWatches(getCollection()), [])
+
   useEffect(() => {
-    setWatches(getCollection())
-    const onSync = () => setWatches(getCollection())
+    refreshWatches()
+    const onSync = () => refreshWatches()
     window.addEventListener(SYNC_COMPLETE_EVENT, onSync)
-    return () => window.removeEventListener(SYNC_COMPLETE_EVENT, onSync)
-  }, [])
+    const onVisibility = () => { if (document.visibilityState === 'visible') refreshWatches() }
+    document.addEventListener('visibilitychange', onVisibility)
+    return () => {
+      window.removeEventListener(SYNC_COMPLETE_EVENT, onSync)
+      document.removeEventListener('visibilitychange', onVisibility)
+    }
+  }, [refreshWatches])
+
+  useEffect(() => {
+    if (location.pathname === '/' || location.pathname === '') refreshWatches()
+  }, [location.pathname, refreshWatches])
 
   useEffect(() => {
     if (searchParams.get('subscription') === 'success') {

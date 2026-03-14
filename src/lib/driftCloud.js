@@ -10,10 +10,19 @@ import {
 const READINGS = 'readings'
 const AGGREGATES = 'aggregates'
 
+function getApiBase() {
+  if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL.replace(/\/$/, '')
+  return ''
+}
+
+/** Firestore doc IDs can't contain "/" — encode for aggregate path */
+function refToDocId(ref) {
+  return String(ref ?? '').replace(/\//g, '__')
+}
+
 /**
  * Upload one drift reading and update the per-reference aggregate.
- * Privacy: we never store uid or any user identifier. Only watch reference + drift value.
- * Raw readings are not readable by clients (Firestore rules). Only aggregates are public.
+ * Uses API for outlier removal and median; falls back to direct Firestore if API unavailable.
  * @param {{ reference: string, brand: string, model: string, specMin?: number, specMax?: number }} watch
  * @param {number} driftInSeconds
  * @param {Date} timestamp
@@ -21,8 +30,31 @@ const AGGREGATES = 'aggregates'
 export async function uploadDriftReading(watch, driftInSeconds, timestamp) {
   if (!db || !auth?.currentUser) return
   const { reference, brand, model, specMin = -999, specMax = 999 } = watch
-  const inSpec = driftInSeconds >= specMin && driftInSeconds <= specMax
+  const ts = timestamp instanceof Date ? timestamp : new Date(timestamp)
 
+  try {
+    const token = await auth.currentUser.getIdToken()
+    const base = getApiBase()
+    const res = await fetch(`${base}/api/upload-reading`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({
+        reference,
+        brand,
+        model,
+        specMin,
+        specMax,
+        driftInSeconds,
+        timestamp: ts.toISOString(),
+      }),
+    })
+    if (res.ok) return
+  } catch {
+    /* API unavailable, fall through to fallback */
+  }
+
+  /* Fallback: direct Firestore write (no outlier removal) */
+  const inSpec = driftInSeconds >= specMin && driftInSeconds <= specMax
   await runTransaction(db, async (tx) => {
     const readingRef = doc(collection(db, READINGS))
     tx.set(readingRef, {
@@ -32,10 +64,10 @@ export async function uploadDriftReading(watch, driftInSeconds, timestamp) {
       specMin,
       specMax,
       driftInSeconds,
-      createdAt: timestamp instanceof Date ? timestamp : new Date(timestamp),
+      createdAt: ts,
     })
 
-    const aggRef = doc(db, AGGREGATES, reference)
+    const aggRef = doc(db, AGGREGATES, refToDocId(reference))
     const aggSnap = await tx.get(aggRef)
     const prev = aggSnap.exists() ? aggSnap.data() : null
     const count = (prev?.readingCount ?? 0) + 1
@@ -58,25 +90,27 @@ export async function uploadDriftReading(watch, driftInSeconds, timestamp) {
 
 /**
  * Fetch all reference aggregates for Discovery.
- * @returns {Promise<Array<{ reference: string, brand: string, model: string, specLow: number, specHigh: number, readingCount: number, sumDrift: number, inSpecCount: number }>>}
+ * @returns {Promise<Array<{ reference, brand, model, specLow, specHigh, readingCount, sumDrift, inSpecCount, median?, excludedCount? }>>}
  */
 export async function fetchAggregates() {
   if (!db) return []
   try {
     const snap = await getDocs(collection(db, AGGREGATES))
     return snap.docs.map((d) => {
-    const x = d.data()
-    return {
-      reference: x.reference ?? d.id,
-      brand: x.brand ?? '',
-      model: x.model ?? '',
-      specLow: x.specLow ?? -999,
-      specHigh: x.specHigh ?? 999,
-      readingCount: x.readingCount ?? 0,
-      sumDrift: x.sumDrift ?? 0,
-      inSpecCount: x.inSpecCount ?? 0,
-    }
-  })
+      const x = d.data()
+      return {
+        reference: x.reference ?? d.id,
+        brand: x.brand ?? '',
+        model: x.model ?? '',
+        specLow: x.specLow ?? -999,
+        specHigh: x.specHigh ?? 999,
+        readingCount: x.readingCount ?? 0,
+        sumDrift: x.sumDrift ?? 0,
+        inSpecCount: x.inSpecCount ?? 0,
+        median: x.median ?? null,
+        excludedCount: x.excludedCount ?? 0,
+      }
+    })
   } catch {
     return []
   }

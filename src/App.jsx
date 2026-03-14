@@ -17,7 +17,6 @@ import ShareResults from './pages/ShareResults'
 import Community from './pages/Community'
 import Subscribe from './pages/Subscribe'
 import Ask from './pages/Ask'
-import DialTest from './pages/DialTest'
 
 const COLLECTION_KEY = 'collectoriq_collection'
 
@@ -116,7 +115,6 @@ function AppContent() {
             <Route path="/drift-test" element={<DriftTest />} />
             <Route path="/discovery" element={<Discovery />} />
             <Route path="/settings" element={<Settings />} />
-            <Route path="/dial-test" element={<DialTest />} />
           </Routes>
         </main>
 
@@ -126,7 +124,6 @@ function AppContent() {
             <Link to="/drift-test" className={location.pathname === '/drift-test' ? 'active' : ''}>Drift test</Link>
           <Link to="/discovery" className={location.pathname === '/discovery' ? 'active' : ''}>Discovery</Link>
           <Link to="/settings" className={location.pathname === '/settings' ? 'active' : ''}>Settings</Link>
-          <Link to="/dial-test" className={location.pathname === '/dial-test' ? 'active' : ''}>Dial</Link>
           </nav>
         )}
       </div>
