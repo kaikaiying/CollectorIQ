@@ -109,6 +109,7 @@ export async function saveUserReadings(uid, reference, readings) {
       id: r.id,
       timestamp: r.timestamp instanceof Date ? r.timestamp.toISOString() : r.timestamp,
       driftInSeconds: r.driftInSeconds,
+      position: r.position ?? null,
     }))
     await setDoc(ref, {
       items: serialized,
@@ -155,6 +156,7 @@ export async function syncFromCloud(uid, getLocalCollection, getLocalReadingsFor
     const parsed = items.map((r) => ({
       ...r,
       timestamp: new Date(r.timestamp),
+      position: r.position ?? null,
     }))
     setLocalReadings(ref, parsed)
   })

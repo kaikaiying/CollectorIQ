@@ -291,7 +291,7 @@ export default function Discovery() {
               )}
               <div style={{ display: 'grid', gap: '0.75rem', marginBottom: '1rem' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ color: 'var(--text-secondary)' }}>Readings (cleaned)</span>
+                  <span style={{ color: 'var(--text-secondary)' }}>Readings</span>
                   <strong>{totalReadings}</strong>
                 </div>
                 {totalReadings >= MIN_READINGS_FOR_STATS && avg != null && (

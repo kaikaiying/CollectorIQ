@@ -23,6 +23,7 @@ export default function Settings() {
   const [restoreLoading, setRestoreLoading] = useState(false)
   const [exportType, setExportType] = useState('full')
   const [exportMsg, setExportMsg] = useState(null)
+  const [feedbackText, setFeedbackText] = useState('')
 
   useEffect(() => {
     if (!user?.uid) return
@@ -73,6 +74,14 @@ export default function Settings() {
     if (ok) setExportMsg('Exported successfully.')
     else setExportMsg('No readings to export. Add watches and run drift tests first.')
   }, [exportType])
+
+  const handleSendFeedback = useCallback(() => {
+    const body = feedbackText.trim()
+    const subject = encodeURIComponent('Collector IQ — Feedback')
+    const mailto = `mailto:${SUPPORT_EMAIL}?subject=${subject}${body ? `&body=${encodeURIComponent(body)}` : ''}`
+    window.location.href = mailto
+    setFeedbackText('')
+  }, [feedbackText])
 
   return (
     <>
@@ -149,6 +158,24 @@ export default function Settings() {
         {exportMsg && (
           <p style={{ margin: '0.5rem 0 0', fontSize: 14, color: 'var(--text-secondary)' }}>{exportMsg}</p>
         )}
+      </div>
+
+      <div className="card">
+        <p className="label" style={{ marginBottom: '0.5rem' }}>Feedback &amp; support</p>
+        <p style={{ fontSize: 15, color: 'var(--text-secondary)', margin: '0 0 0.5rem' }}>
+          Questions, complaints, or feature requests? We read every message.
+        </p>
+        <textarea
+          className="feedback-textarea"
+          placeholder="Describe your issue or suggestion…"
+          value={feedbackText}
+          onChange={(e) => setFeedbackText(e.target.value)}
+          rows={3}
+          style={{ width: '100%', marginBottom: '0.5rem', resize: 'vertical', minHeight: 80 }}
+        />
+        <button type="button" className="btn btn-secondary" style={{ width: '100%' }} onClick={handleSendFeedback}>
+          Send feedback
+        </button>
       </div>
 
       <div className="card">

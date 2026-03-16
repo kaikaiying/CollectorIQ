@@ -5,7 +5,12 @@
 
 import * as XLSX from 'xlsx'
 import { getCollection } from '../App'
-import { getDriftReadings } from './driftStorage'
+import { getDriftReadings, STORAGE_POSITIONS } from './driftStorage'
+
+function getPositionLabel(id) {
+  if (!id) return ''
+  return STORAGE_POSITIONS.find((p) => p.id === id)?.label ?? id
+}
 
 function stdDev(values) {
   if (values.length < 2) return null
@@ -26,7 +31,7 @@ function formatTime(d) {
  * Build rows for Full report: each reading as a row
  */
 function buildFullReport(watches) {
-  const rows = [['Brand', 'Model', 'Reference', 'Date', 'Time', 'Drift (s)', 'Spec Min', 'Spec Max', 'In Spec']]
+  const rows = [['Brand', 'Model', 'Reference', 'Date', 'Time', 'Drift (s)', 'Position', 'Spec Min', 'Spec Max', 'In Spec']]
   for (const w of watches) {
     const readings = getDriftReadings(w.reference).sort((a, b) => a.timestamp - b.timestamp)
     const specMin = w.specMin ?? ''
@@ -42,6 +47,7 @@ function buildFullReport(watches) {
         formatDate(r.timestamp),
         formatTime(r.timestamp),
         r.driftInSeconds,
+        getPositionLabel(r.position),
         specMin,
         specMax,
         inSpec,
@@ -94,7 +100,7 @@ function buildSummaryReport(watches) {
  * Build rows for Minimal report: Date, Time, Model, Drift
  */
 function buildMinimalReport(watches) {
-  const rows = [['Date', 'Time', 'Brand', 'Model', 'Drift (s)']]
+  const rows = [['Date', 'Time', 'Brand', 'Model', 'Drift (s)', 'Position']]
   const all = []
   for (const w of watches) {
     const readings = getDriftReadings(w.reference)
@@ -108,6 +114,7 @@ function buildMinimalReport(watches) {
       r.watch.brand,
       r.watch.model,
       r.driftInSeconds,
+      getPositionLabel(r.position),
     ])
   }
   return rows

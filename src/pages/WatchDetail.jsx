@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { usePageTitle } from '../contexts/PageTitleContext'
 import { getCollection, SYNC_COMPLETE_EVENT } from '../App'
-import { getDriftReadings, deleteDriftReading, clearDriftReadings } from '../lib/driftStorage'
+import { getDriftReadings, deleteDriftReading, clearDriftReadings, STORAGE_POSITIONS } from '../lib/driftStorage'
 import { pushReadingsToCloud } from '../lib/userDataSync'
 import { getOfficialServiceUrl } from '../lib/serviceCenters'
 import { rateBasedInSpecCount, getRecentRates, getReadingsWithRates, getRates } from '../lib/driftStats'
@@ -154,7 +154,7 @@ export default function WatchDetail() {
           <p style={{ fontSize: 13, color: 'var(--text-tertiary)', margin: '0 0 1rem' }}>
             Synced to atomic time or had a service? Use &quot;Corrected watch — reset&quot; to clear old readings.
           </p>
-          <div className="drift-history-table">
+          <div className="drift-history-list">
             <div className="drift-history-header">
               <span>Date</span>
               <span>Rate (s/day)</span>
@@ -162,8 +162,11 @@ export default function WatchDetail() {
               <span />
             </div>
             {getReadingsWithRates(sorted, min, max).slice(0, 20).map(({ reading: r, rate, inSpec }) => (
-              <div key={r.id} className="drift-history-row">
-                <span className="drift-history-date">{r.timestamp.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })} {r.timestamp.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}</span>
+              <div key={r.id} className="drift-history-item">
+                <div className="drift-history-date-cell">
+                  <span className="drift-history-date">{r.timestamp.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })} {r.timestamp.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}</span>
+                  <span className="drift-history-position">{r.position ? (STORAGE_POSITIONS.find((p) => p.id === r.position)?.label ?? r.position) : '—'}</span>
+                </div>
                 <span
                   className="drift-history-rate"
                   style={{

@@ -18,9 +18,19 @@ export function saveDriftReadings(reference, readings) {
   )
 }
 
-export function addDriftReading(reference, driftInSeconds, timestamp = new Date()) {
+/** Preset positions for overnight storage (how the watch was left). */
+export const STORAGE_POSITIONS = [
+  { id: '9up', label: '9 up' },
+  { id: '12up', label: '12 up' },
+  { id: '3up', label: '3 up' },
+  { id: '6up', label: '6 up' },
+  { id: 'faceup', label: 'Face up' },
+  { id: 'facedown', label: 'Face down' },
+]
+
+export function addDriftReading(reference, driftInSeconds, timestamp = new Date(), position = null) {
   const list = getDriftReadings(reference)
-  list.push({ id: crypto.randomUUID(), timestamp, driftInSeconds })
+  list.push({ id: crypto.randomUUID(), timestamp, driftInSeconds, position: position || null })
   saveDriftReadings(reference, list)
   return list
 }

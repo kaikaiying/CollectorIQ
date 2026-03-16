@@ -5,7 +5,7 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { usePageTitle } from '../contexts/PageTitleContext'
 import { getCollection, SYNC_COMPLETE_EVENT } from '../App'
 import PageSeo from '../components/PageSeo'
-import { getDriftReadings, addDriftReading } from '../lib/driftStorage'
+import { getDriftReadings, addDriftReading, STORAGE_POSITIONS } from '../lib/driftStorage'
 import { pushReadingsToCloud } from '../lib/userDataSync'
 import { uploadDriftReading, fetchAggregates } from '../lib/driftCloud'
 import { fetchAtomicTimeOrDevice } from '../lib/atomicTime'
@@ -137,6 +137,7 @@ export default function DriftTest() {
   const [readings, setReadings] = useState([])
   const [communityAgg, setCommunityAgg] = useState(null)
   const [referenceTime, setReferenceTime] = useState(null) // { serverDate, deviceAtFetch } for live reference
+  const [selectedPosition, setSelectedPosition] = useState(null) // how watch was stored overnight
   const [, setTick] = useState(0) // force re-render every second so reference time display updates
   const tapLockRef = useRef(false)
 
@@ -329,7 +330,7 @@ export default function DriftTest() {
     setResult(null)
     const atomicAtTap = new Date(referenceTime.serverDate.getTime() + (Date.now() - referenceTime.deviceAtFetch.getTime()))
     const driftSeconds = (targetTime - atomicAtTap) / 1000
-    addDriftReading(selectedWatch.reference, driftSeconds, atomicAtTap)
+    addDriftReading(selectedWatch.reference, driftSeconds, atomicAtTap, selectedPosition)
     const updated = getDriftReadings(selectedWatch.reference)
     setReadings(updated)
     setResult({ drift: driftSeconds, fromServer: referenceTime.fromServer !== false })
@@ -412,7 +413,22 @@ export default function DriftTest() {
         {countdown === 0 && <p className="tap-now">Tap now</p>}
       </div>
 
-      <button type="button" className="btn" style={{ width: '100%', minHeight: 56, fontSize: '1.1rem' }} onClick={handleTap} disabled={!referenceTime}>
+      <p className="label" style={{ marginBottom: '0.35rem' }}>How did you store the watch overnight?</p>
+      <div className="drift-position-presets">
+        {STORAGE_POSITIONS.map((p) => (
+          <button
+            key={p.id}
+            type="button"
+            className={`drift-position-btn ${selectedPosition === p.id ? 'selected' : ''}`}
+            onClick={() => setSelectedPosition(selectedPosition === p.id ? null : p.id)}
+          >
+            {p.label}
+          </button>
+        ))}
+      </div>
+      <p style={{ fontSize: 13, color: 'var(--text-tertiary)', margin: '0.25rem 0 0' }}>Optional — helps track position vs accuracy</p>
+
+      <button type="button" className="btn" style={{ width: '100%', minHeight: 56, fontSize: '1.1rem', marginTop: '1rem' }} onClick={handleTap} disabled={!referenceTime}>
         Tap
       </button>
       <button type="button" className="btn btn-secondary" style={{ width: '100%', marginTop: '0.5rem' }} onClick={setNewTarget}>

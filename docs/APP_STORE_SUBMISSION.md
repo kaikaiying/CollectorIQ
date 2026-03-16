@@ -112,23 +112,13 @@ Be accurate — this appears on your App Store listing.
 Or use one size; Apple can scale, but quality may suffer.
 
 **Promotional text (optional, 170 chars)**  
-e.g. *Track your watch accuracy. Drift test vs atomic clock. First watch free.*
+See `docs/ASO_OPTIMIZATION.md` for optimized copy. Example: *Track your watch accuracy vs atomic time. Drift test in seconds. Compare to COSC and manufacturer specs. First watch free.*
 
 **Description (required, 4000 chars max)**  
-e.g.:
-
-> Collector IQ helps watch enthusiasts track and analyze the accuracy of their timepieces.
->
-> • First watch free — no card required  
-> • Drift test against atomic clock time  
-> • Compare to manufacturer specs (COSC, s/day)  
-> • Add unlimited watches with Collector IQ Pro ($6.99/month, renews until cancelled)  
-> • Export your data anytime  
->
-> Sign in with Apple or Google. Cancel anytime.
+See `docs/ASO_OPTIMIZATION.md` for full optimized description. Lead with value and keywords.
 
 **Keywords (100 chars max, comma-separated)**  
-e.g. `watch accuracy,drift test,atomic clock,COSC,chronometer,mechanical watch`
+`drift test,atomic clock,COSC,chronometer,mechanical watch,automatic watch,watch timing,seconds per day,Omega,Rolex,Seiko,Tudor,watch collector`
 
 **Support URL (required)**  
 `https://collectoriq.app` or `mailto:support@collectoriq.app`
