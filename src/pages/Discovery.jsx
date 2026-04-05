@@ -3,7 +3,10 @@ import { useLocation, useSearchParams, Link } from 'react-router-dom'
 import { fetchAggregates } from '../lib/driftCloud'
 import { getCollection } from '../App'
 import PageSeo from '../components/PageSeo'
+import FeedbackOptions from '../components/FeedbackOptions'
 import { usePageTitle } from '../contexts/PageTitleContext'
+import InfoTip from '../components/InfoTip'
+import { DiscoveryVisual } from '../components/InfoTipFigures'
 
 /** Mock aggregates for dev/preview. Matches references in watchspecs.json. */
 const MOCK_AGGREGATES = [
@@ -208,10 +211,16 @@ export default function Discovery() {
 
     return (
       <>
-        <PageSeo title={`${selectedRow.model} · Discovery`} description={`Community accuracy data for ${selectedRow.brand} ${selectedRow.model}. ${totalReadings} readings, ${pctIn}% in spec.`} />
-        <Link to="/discovery" style={{ fontSize: 14, color: 'var(--text-secondary)', marginBottom: 'var(--space)', display: 'inline-block' }}>
+        <PageSeo
+          title={`${selectedRow.model} · Discovery`}
+          description={`Anonymous community drift data for ${selectedRow.brand} ${selectedRow.model} (${selectedRow.reference}). Factory spec ${formatSpecRange(selectedRow.specLow, selectedRow.specHigh)}; ${totalReadings} contributed reading${totalReadings !== 1 ? 's' : ''}.${totalReadings >= MIN_READINGS_FOR_STATS && pctIn != null ? ` About ${pctIn}% in spec.` : totalReadings > 0 ? ' Aggregate detail increases as more people contribute.' : ''} Real-world timing vs brochure specs — Watch Collector Discovery.`}
+        />
+        <Link to="/discovery" style={{ fontSize: 14, color: 'var(--text-secondary)', marginBottom: '0.35rem', display: 'inline-block' }}>
           ← Back to Discovery
         </Link>
+        <p className="discovery-view-desc" style={{ marginBottom: 'var(--space)' }}>
+          Pooled community numbers for this reference vs the maker’s spec band. <strong>Yours may differ</strong> — regulation, service, and how you wear it all matter.
+        </p>
         <div className="card" style={{ marginBottom: 'var(--space)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '0.5rem' }}>
             <div>
@@ -326,7 +335,7 @@ export default function Discovery() {
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
           {inCollection ? (
-            <Link to={`/watch/${encodeURIComponent(selectedRef)}`} className="btn" style={{ width: '100%' }}>
+            <Link to={`/?ref=${encodeURIComponent(selectedRef)}`} className="btn" style={{ width: '100%' }}>
               View your readings
             </Link>
           ) : (
@@ -334,7 +343,7 @@ export default function Discovery() {
               Add to collection
             </Link>
           )}
-          <Link to="/drift-test" className="btn btn-secondary" style={{ width: '100%' }}>
+          <Link to={`/?ref=${encodeURIComponent(selectedRef)}`} className="btn btn-secondary" style={{ width: '100%' }}>
             Run drift test
           </Link>
         </div>
@@ -344,10 +353,24 @@ export default function Discovery() {
 
   return (
     <>
-      <PageSeo title="Discovery" description="Community watch accuracy data vs manufacturer specs (s/day). See how Omega, Rolex, Seiko perform. Watch atomic tracker with real-world data." />
-      <p style={{ color: 'var(--text-secondary)', marginBottom: 'var(--space)' }}>
-        Community accuracy vs manufacturer specs. Which brands deliver?
-      </p>
+      <PageSeo
+        title="Discovery"
+        description="Community drift vs factory spec by watch reference. Anonymous app data — search, compare, add a watch or run a drift test. Watch Collector."
+      />
+      <div className="label-with-info discovery-intro" style={{ marginBottom: 'var(--space)', alignItems: 'flex-start' }}>
+        <p className="time-page-lead" style={{ margin: 0 }}>
+          Community drift vs factory spec, by reference. Search below, open a watch for numbers and spec — add it or run a drift test to chip in.
+        </p>
+        <InfoTip label="About Discovery">
+          <p>
+            Totals come from <strong>anonymous drift tests</strong> in the app (same tool as Collection), matched to each ref’s published s/day band. <strong>Condition and wear skew any one watch</strong> — treat this as a rough crowd signal, not a bench test. Often quicker than digging through forums for the same hint.
+          </p>
+          <p>
+            With <strong>under three</strong> contributed readings we only show counts (“Limited”) until there’s enough data to share averages safely.
+          </p>
+          <DiscoveryVisual />
+        </InfoTip>
+      </div>
 
       <input
         type="text"
@@ -416,8 +439,10 @@ export default function Discovery() {
         )}
       </div>
 
-      <p style={{ fontSize: 13, color: 'var(--text-tertiary)', marginTop: 'var(--space)' }}>
-        Community data is aggregated only. More readings = more reliable. Run drift tests to contribute.
+      <FeedbackOptions variant="compact" />
+
+      <p className="time-page-lead" style={{ marginTop: 'var(--space)', marginBottom: 0 }}>
+        Rolled-up per reference only — never who tapped. More tests, clearer averages.
       </p>
       {useMock && (
         <p style={{ fontSize: 12, color: 'var(--text-tertiary)', marginTop: '0.5rem', fontStyle: 'italic' }}>

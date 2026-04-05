@@ -1,6 +1,8 @@
 import { useSearchParams, Link } from 'react-router-dom'
 import { useMemo } from 'react'
 import PageSeo from '../components/PageSeo'
+import InfoTip from '../components/InfoTip'
+import { ShareLinkVisual } from '../components/InfoTipFigures'
 
 export default function ShareResults() {
   const [searchParams] = useSearchParams()
@@ -25,7 +27,7 @@ export default function ShareResults() {
         <div className="card">
           <h1 className="page-title">Share results</h1>
           <p style={{ color: 'var(--text-secondary)' }}>Invalid or missing share link.</p>
-          <Link to="/" className="btn">Go to Collector IQ</Link>
+          <Link to="/" className="btn">Open Watch Collector</Link>
         </div>
       </>
     )
@@ -37,10 +39,18 @@ export default function ShareResults() {
     <>
       <PageSeo
         title={`${brand} ${model} accuracy`}
-        description={`${brand} ${model} (${reference}): ${n} readings, ${mean != null ? (mean >= 0 ? '+' : '') + Number(mean).toFixed(1) : '—'} s mean${pctInSpec != null ? `, ${pctInSpec}% in spec` : ''}. Tracked with Collector IQ.`}
+        description={`${brand} ${model} (${reference}): ${n} readings, ${mean != null ? (mean >= 0 ? '+' : '') + Number(mean).toFixed(1) : '—'} s mean${pctInSpec != null ? `, ${pctInSpec}% in spec` : ''}. Watch Collector — Accuracy Tracker.`}
       />
       <div className="card share-results-card">
-        <p className="share-results-label">Watch accuracy results</p>
+        <div className="label-with-info" style={{ marginBottom: '0.35rem' }}>
+          <p className="share-results-label" style={{ margin: 0 }}>Watch accuracy results</p>
+          <InfoTip label="About this link">
+            <p>
+              Someone shared a snapshot of their drift tests from Watch Collector. <strong>Mean</strong> is average error per reading; <strong>in spec</strong> compares their trend to the manufacturer range if we have enough data.
+            </p>
+            <ShareLinkVisual />
+          </InfoTip>
+        </div>
         <h1 className="share-results-title">{brand} {model}</h1>
         <p className="share-results-ref">Ref: {reference || '—'}</p>
         <dl className="share-results-dl">
@@ -59,8 +69,8 @@ export default function ShareResults() {
             </>
           )}
         </dl>
-        <p className="share-results-cta">Tracked with Collector IQ</p>
-        <Link to="/login" className="btn" style={{ width: '100%' }}>
+        <p className="share-results-cta">Tracked with Watch Collector</p>
+        <Link to="/" className="btn" style={{ width: '100%' }}>
           Track your watch accuracy →
         </Link>
       </div>

@@ -12,3 +12,8 @@ dist/
 # Editor / OS
 .DS_Store
 *.log
+vite.config.js.timestamp-*
+
+
+# Generated App Store captures (script defaults to Desktop; keep repo free of PNG churn)
+marketing/app-store-screenshots/

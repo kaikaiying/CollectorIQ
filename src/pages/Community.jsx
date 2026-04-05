@@ -1,28 +1,30 @@
 import { Link } from 'react-router-dom'
 import PageSeo from '../components/PageSeo'
+import InfoTip from '../components/InfoTip'
+import { CommunityShareVisual } from '../components/InfoTipFigures'
 
 const APP_URL = typeof window !== 'undefined' ? window.location.origin : 'https://collectoriq.app'
 
 const BLURBS = [
   {
     name: 'Reddit (r/Watches, r/Omega, etc.)',
-    text: `I've been using Collector IQ to track my watch accuracy — drift test against atomic time, compare to manufacturer specs and see how your watch stacks up. Worth a look if you're into timing: ${APP_URL}`,
+    text: `I've been using Watch Collector — Accuracy Tracker for drift tests vs atomic time and manufacturer specs. Worth a look if you're into timing: ${APP_URL}`,
   },
   {
     name: 'WatchCrunch',
-    text: `Drift test your watch with atomic time and compare to COSC/specs. Collector IQ: ${APP_URL}`,
+    text: `Drift test your watch with atomic time and compare to COSC/specs. Watch Collector: ${APP_URL}`,
   },
   {
     name: 'Watch Canada / Canadian watch groups',
-    text: `Track your watch accuracy with atomic-time drift tests. See how you compare to manufacturer specs and the community. Collector IQ — ${APP_URL}`,
+    text: `Track your watch accuracy with atomic-time drift tests. Watch Collector — Accuracy Tracker: ${APP_URL}`,
   },
   {
     name: 'Facebook — Watch Club, Watch Canada, marketplace',
-    text: `Anyone else tracking their watch accuracy? I use Collector IQ — drift test vs atomic time, compare to specs and other collectors. ${APP_URL}`,
+    text: `Anyone else tracking their watch accuracy? I use Watch Collector — drift vs atomic time and specs. ${APP_URL}`,
   },
   {
     name: 'YouTube (video description / pinned comment)',
-    text: `Track your watch accuracy: Collector IQ — drift test against atomic time, compare to manufacturer specs (s/day) and the community. https://collectoriq.app`,
+    text: `Track your watch accuracy: Watch Collector — Accuracy Tracker. Drift vs atomic time & specs (s/day). https://collectoriq.app`,
   },
 ]
 
@@ -31,15 +33,25 @@ export default function Community() {
     <div className="app-main" style={{ paddingBottom: '2rem' }}>
       <PageSeo
         title="For watch communities"
-        description="Share Collector IQ with Reddit, WatchCrunch, Watch Canada, Facebook watch groups. Copy-paste blurbs for watch accuracy and drift test app."
+        description="Share Watch Collector — Accuracy Tracker with Reddit, WatchCrunch, and watch groups."
       />
-      <Link to="/login" style={{ fontSize: 15, color: 'var(--accent)', marginBottom: '1rem', display: 'inline-block' }}>
+      <Link to="/" style={{ fontSize: 15, color: 'var(--accent)', marginBottom: '1rem', display: 'inline-block' }}>
         ← Back to app
       </Link>
-      <h1 style={{ fontSize: '1.35rem', fontWeight: 600, marginBottom: '0.25rem' }}>Share with your watch community</h1>
-      <p style={{ fontSize: 15, color: 'var(--text-secondary)', marginBottom: '1.5rem', lineHeight: 1.5 }}>
-        Direct fellow enthusiasts here — Reddit, WatchCrunch, Watch Canada, Facebook watch clubs, YouTube. Copy the text below and paste where you post.
-      </p>
+      <div className="label-with-info" style={{ marginBottom: '1.5rem' }}>
+        <div style={{ flex: '1 1 240px', minWidth: 0 }}>
+          <h1 style={{ fontSize: '1.35rem', fontWeight: 600, margin: '0 0 0.25rem' }}>Share with your watch community</h1>
+          <p style={{ fontSize: 15, color: 'var(--text-secondary)', margin: 0, lineHeight: 1.5 }}>
+            Direct fellow enthusiasts here — Reddit, WatchCrunch, Watch Canada, Facebook watch clubs, YouTube. Copy the text below and paste where you post.
+          </p>
+        </div>
+        <InfoTip label="About sharing">
+          <p>
+            These are starter messages you can paste as-is or edit. Nothing posts automatically — you choose where to share. The link opens Watch Collector in a browser.
+          </p>
+          <CommunityShareVisual />
+        </InfoTip>
+      </div>
       {BLURBS.map((b) => (
         <div key={b.name} className="card" style={{ marginBottom: '1rem' }}>
           <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)', margin: '0 0 0.5rem' }}>{b.name}</p>

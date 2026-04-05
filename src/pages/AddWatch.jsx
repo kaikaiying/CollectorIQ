@@ -1,15 +1,18 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { getCollection, setCollection } from '../App'
-import { useAuth } from '../contexts/AuthContext'
-import { getSubscriptionStatus, FIRST_WATCH_FREE, SUBSCRIPTION_PRICE_DISPLAY, SUBSCRIPTION_TERMS_IAP, SUBSCRIPTION_TERMS_STRIPE } from '../lib/subscription'
-import { isIAPPlatform, purchaseSubscription, restorePurchases, getSubscriptionProduct } from '../lib/purchases'
 import {
   MOVEMENT_TYPES,
   CATEGORIES,
+  NOTES_MAX,
   validateCustomWatch,
   generateCustomReference,
 } from '../lib/watchSpecSchema'
+import InfoTip from '../components/InfoTip'
+import { CatalogCustomVisual } from '../components/InfoTipFigures'
+import FeedbackOptions from '../components/FeedbackOptions'
+import DateField from '../components/DateField'
+import { todayDateInputValue } from '../lib/watchOwnership'
 
 function parseSpec(s) {
   if (!s || typeof s !== 'string') return null
@@ -17,108 +20,17 @@ function parseSpec(s) {
   return Number.isFinite(n) ? n : null
 }
 
-function getApiBase() {
-  if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL.replace(/\/$/, '')
-  if (typeof window !== 'undefined') return ''
-  return ''
-}
-
 export default function AddWatch() {
-  const { user } = useAuth()
-  const [mode, setMode] = useState('catalog') // 'catalog' | 'custom'
+  const [mode, setMode] = useState('catalog')
   const [specs, setSpecs] = useState([])
   const [brand, setBrand] = useState('')
   const [model, setModel] = useState('')
   const [reference, setReference] = useState('')
   const [loading, setLoading] = useState(true)
-  const [subLoading, setSubLoading] = useState(true)
-  const [hasActiveSubscription, setHasActiveSubscription] = useState(false)
-  const [checkoutLoading, setCheckoutLoading] = useState(false)
-  const [restoreLoading, setRestoreLoading] = useState(false)
-  const [iapPrice, setIapPrice] = useState(null)
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const refFromUrl = searchParams.get('ref')
-  const collectionLength = getCollection().length
-  const needsSubscription = collectionLength >= FIRST_WATCH_FREE
 
-  useEffect(() => {
-    if (!user?.uid || !needsSubscription) {
-      setSubLoading(false)
-      if (!needsSubscription) setHasActiveSubscription(true)
-      return
-    }
-    let cancelled = false
-    getSubscriptionStatus(user.uid).then(({ hasActiveSubscription: active }) => {
-      if (!cancelled) {
-        setHasActiveSubscription(active)
-        setSubLoading(false)
-      }
-    })
-    return () => { cancelled = true }
-  }, [user?.uid, needsSubscription])
-
-  useEffect(() => {
-    if (!isIAPPlatform() || !needsSubscription) return
-    let cancelled = false
-    getSubscriptionProduct().then((product) => {
-      if (!cancelled && product?.priceString) setIapPrice(product.priceString)
-    })
-    return () => { cancelled = true }
-  }, [needsSubscription])
-
-  const startCheckout = useCallback(async (plan = 'monthly') => {
-    if (!user || checkoutLoading) return
-    setCheckoutLoading(true)
-    try {
-      if (isIAPPlatform()) {
-        const ok = await purchaseSubscription()
-        if (ok) setHasActiveSubscription(true)
-      } else {
-        const token = await user.getIdToken()
-        const base = getApiBase()
-        const res = await fetch(`${base}/api/create-checkout-session`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-          body: JSON.stringify({
-            successUrl: window.location.origin + (window.location.pathname || '/') + '#/?subscription=success',
-            cancelUrl: window.location.origin + (window.location.pathname || '/') + '#/add-watch',
-            plan,
-          }),
-        })
-        const data = await res.json()
-        if (!res.ok) throw new Error(data.error || 'Checkout failed')
-        if (data.url) window.location.href = data.url
-        else throw new Error('No checkout URL')
-      }
-    } catch (e) {
-      if (e?.message && !String(e.message).toLowerCase().includes('cancel')) {
-        const msg = e.message || ''
-        const isPatternError = msg.toLowerCase().includes('string') && msg.toLowerCase().includes('pattern')
-        alert(isPatternError
-          ? 'Subscription not ready yet. Make sure the product is set up in App Store Connect (see docs/APPLE_IAP_SETUP.md). It can take 15–30 min to appear.'
-          : (msg || 'Something went wrong. Try again.'))
-      }
-    } finally {
-      setCheckoutLoading(false)
-    }
-  }, [user, checkoutLoading])
-
-  const handleRestore = useCallback(async () => {
-    if (restoreLoading) return
-    setRestoreLoading(true)
-    try {
-      const ok = await restorePurchases()
-      if (ok) setHasActiveSubscription(true)
-      else alert('No previous purchases found.')
-    } catch (e) {
-      alert(e.message || 'Restore failed.')
-    } finally {
-      setRestoreLoading(false)
-    }
-  }, [restoreLoading])
-
-  // Custom form state
   const [customBrand, setCustomBrand] = useState('')
   const [customModel, setCustomModel] = useState('')
   const [customReference, setCustomReference] = useState('')
@@ -128,6 +40,11 @@ export default function AddWatch() {
   const [movementCalibre, setMovementCalibre] = useState('')
   const [category, setCategory] = useState('')
   const [notes, setNotes] = useState('')
+  const [catalogPurchaseDate, setCatalogPurchaseDate] = useState('')
+  const [catalogSerial, setCatalogSerial] = useState('')
+  const [catalogNotes, setCatalogNotes] = useState('')
+  const [customPurchaseDate, setCustomPurchaseDate] = useState('')
+  const [customSerial, setCustomSerial] = useState('')
   const [customErrors, setCustomErrors] = useState({})
 
   useEffect(() => {
@@ -168,16 +85,18 @@ export default function AddWatch() {
       navigate('/')
       return
     }
-    setCollection([
-      ...col,
-      {
-        brand: currentSpec.brand,
-        model: currentSpec.model,
-        reference: currentSpec.reference,
-        specMin: parseSpec(currentSpec.spec_low),
-        specMax: parseSpec(currentSpec.spec_high),
-      },
-    ])
+    const row = {
+      brand: currentSpec.brand,
+      model: currentSpec.model,
+      reference: currentSpec.reference,
+      specMin: parseSpec(currentSpec.spec_low),
+      specMax: parseSpec(currentSpec.spec_high),
+    }
+    if (catalogPurchaseDate) row.purchaseDate = catalogPurchaseDate
+    if (catalogSerial.trim()) row.serialNumber = catalogSerial.trim()
+    const cn = catalogNotes.trim()
+    if (cn) row.notes = cn.slice(0, NOTES_MAX)
+    setCollection([...col, row])
     navigate('/')
   }
 
@@ -193,6 +112,8 @@ export default function AddWatch() {
       movementCalibre: movementCalibre || undefined,
       category: category || undefined,
       notes: notes || undefined,
+      serialNumber: customSerial || undefined,
+      purchaseDate: customPurchaseDate || undefined,
     })
     if (!valid) {
       setCustomErrors(errors)
@@ -204,21 +125,21 @@ export default function AddWatch() {
       setCustomErrors({ reference: 'This watch is already in your collection.' })
       return
     }
-    setCollection([
-      ...col,
-      {
-        brand: sanitized.brand,
-        model: sanitized.model,
-        reference: ref,
-        specMin: sanitized.specMin,
-        specMax: sanitized.specMax,
-        movementType: sanitized.movementType,
-        movementCalibre: sanitized.movementCalibre,
-        category: sanitized.category,
-        notes: sanitized.notes,
-        isCustom: true,
-      },
-    ])
+    const row = {
+      brand: sanitized.brand,
+      model: sanitized.model,
+      reference: ref,
+      specMin: sanitized.specMin,
+      specMax: sanitized.specMax,
+      movementType: sanitized.movementType,
+      movementCalibre: sanitized.movementCalibre,
+      category: sanitized.category,
+      notes: sanitized.notes,
+      isCustom: true,
+    }
+    if (sanitized.serialNumber) row.serialNumber = sanitized.serialNumber
+    if (sanitized.purchaseDate) row.purchaseDate = sanitized.purchaseDate
+    setCollection([...col, row])
     navigate('/')
   }
 
@@ -226,62 +147,20 @@ export default function AddWatch() {
     return <p className="page-title">Loading…</p>
   }
 
-  if (needsSubscription && subLoading) {
-    return (
-      <>
-        <h1 className="page-title">Add watch</h1>
-        <p style={{ color: 'var(--text-secondary)' }}>Loading…</p>
-      </>
-    )
-  }
-
-  if (needsSubscription && !hasActiveSubscription) {
-    const useIAP = isIAPPlatform()
-    return (
-      <>
-        <h1 className="page-title">Add watch</h1>
-        <div className="card paywall-card">
-          <p className="paywall-title">Add more watches</p>
-          <p className="paywall-desc">
-            First watch is free. Add unlimited watches for {useIAP ? (iapPrice ? `${iapPrice}/month` : 'a monthly subscription') : SUBSCRIPTION_PRICE_DISPLAY}.
-          </p>
-          <div className="paywall-buttons">
-            <button
-              type="button"
-              className="btn"
-              onClick={() => startCheckout('monthly')}
-              disabled={checkoutLoading}
-            >
-              {checkoutLoading ? '…' : useIAP ? (iapPrice ? `Subscribe — ${iapPrice}/month` : 'Subscribe') : `Subscribe — ${SUBSCRIPTION_PRICE_DISPLAY}`}
-            </button>
-            {useIAP && (
-              <button
-                type="button"
-                className="btn btn-secondary"
-                onClick={handleRestore}
-                disabled={restoreLoading}
-              >
-                {restoreLoading ? '…' : 'Restore Purchases'}
-              </button>
-            )}
-          </div>
-          <p className="paywall-hint" style={{ fontSize: 12 }}>
-            {useIAP ? SUBSCRIPTION_TERMS_IAP : SUBSCRIPTION_TERMS_STRIPE}
-          </p>
-        </div>
-        <button type="button" className="btn btn-secondary" style={{ width: '100%', marginTop: '0.5rem' }} onClick={() => navigate('/')}>
-          Back to collection
-        </button>
-      </>
-    )
-  }
-
   return (
     <>
       <h1 className="page-title">Add watch</h1>
-      <p style={{ color: 'var(--text-secondary)', marginBottom: 'var(--space-lg)' }}>
-        From the catalog or add your own with manufacturer accuracy spec.
-      </p>
+      <div className="label-with-info" style={{ marginBottom: 'var(--space-lg)' }}>
+        <p style={{ color: 'var(--text-secondary)' }}>
+          From the catalog or add your own with manufacturer accuracy spec.
+        </p>
+        <InfoTip label="Catalog vs custom">
+          <p>
+            <strong>Catalog</strong> pulls specs from the app database. <strong>Custom</strong> is for watches not listed — enter the accuracy range from the manufacturer (e.g. −2 to +2 s/day) so drift tests can show in-spec vs out-of-spec.
+          </p>
+          <CatalogCustomVisual />
+        </InfoTip>
+      </div>
 
       <div style={{ display: 'flex', gap: '0.5rem', marginBottom: 'var(--space-lg)' }}>
         <button
@@ -349,6 +228,42 @@ export default function AddWatch() {
                     Spec: {currentSpec.spec_low} to {currentSpec.spec_high}
                   </p>
                 )}
+                <label className="label" htmlFor="add-catalog-purchase" style={{ marginTop: 'var(--space)' }}>Purchase date (optional)</label>
+                <DateField
+                  id="add-catalog-purchase"
+                  value={catalogPurchaseDate}
+                  onChange={setCatalogPurchaseDate}
+                  max={todayDateInputValue()}
+                  allowClear
+                  style={{ marginBottom: '0.5rem' }}
+                />
+                <label className="label">Serial number (optional)</label>
+                <input
+                  type="text"
+                  className="input"
+                  value={catalogSerial}
+                  onChange={(e) => setCatalogSerial(e.target.value)}
+                  placeholder="Case or movement serial"
+                  maxLength={50}
+                  autoComplete="off"
+                  style={{ marginBottom: '0.5rem' }}
+                />
+                <label className="label" htmlFor="add-catalog-notes">Notes (optional)</label>
+                <textarea
+                  id="add-catalog-notes"
+                  className="input"
+                  value={catalogNotes}
+                  onChange={(e) => setCatalogNotes(e.target.value)}
+                  placeholder="e.g. year, dial variant, provenance"
+                  maxLength={NOTES_MAX}
+                  rows={3}
+                  style={{
+                    minHeight: 72,
+                    resize: 'vertical',
+                    fontFamily: 'var(--font-body)',
+                    lineHeight: 1.45,
+                  }}
+                />
               </div>
               <button type="button" className="btn" style={{ width: '100%' }} onClick={handleAddFromCatalog} disabled={!currentSpec}>
                 Add to collection
@@ -459,15 +374,47 @@ export default function AddWatch() {
               ))}
             </select>
 
-            <label className="label">Notes (optional)</label>
+            <label className="label" htmlFor="add-custom-purchase" style={{ marginTop: 'var(--space)' }}>Purchase date (optional)</label>
+            <DateField
+              id="add-custom-purchase"
+              value={customPurchaseDate}
+              onChange={setCustomPurchaseDate}
+              max={todayDateInputValue()}
+              allowClear
+              style={{ marginBottom: '0.5rem' }}
+            />
+            {customErrors.purchaseDate && <p className="error-message" style={{ marginTop: -4 }}>{customErrors.purchaseDate}</p>}
+
+            <label className="label">Serial number (optional)</label>
             <input
               type="text"
               className="input"
+              value={customSerial}
+              onChange={(e) => setCustomSerial(e.target.value)}
+              placeholder="Case or movement serial"
+              maxLength={50}
+              autoComplete="off"
+              style={{ marginBottom: '0.5rem' }}
+            />
+            {customErrors.serialNumber && <p className="error-message" style={{ marginTop: -4 }}>{customErrors.serialNumber}</p>}
+
+            <label className="label" htmlFor="add-custom-notes">Notes (optional)</label>
+            <textarea
+              id="add-custom-notes"
+              className="input"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder="e.g. year, variant"
-              maxLength={200}
+              placeholder="e.g. year, dial variant, provenance"
+              maxLength={NOTES_MAX}
+              rows={3}
+              style={{
+                minHeight: 72,
+                resize: 'vertical',
+                fontFamily: 'var(--font-body)',
+                lineHeight: 1.45,
+              }}
             />
+            {customErrors.notes && <p className="error-message" style={{ marginTop: 4 }}>{customErrors.notes}</p>}
           </div>
 
           <button type="button" className="btn" style={{ width: '100%' }} onClick={handleAddCustom}>
@@ -479,6 +426,8 @@ export default function AddWatch() {
       <button type="button" className="btn btn-secondary" style={{ width: '100%', marginTop: '0.5rem' }} onClick={() => navigate('/')}>
         Cancel
       </button>
+
+      <FeedbackOptions variant="compact" />
     </>
   )
 }

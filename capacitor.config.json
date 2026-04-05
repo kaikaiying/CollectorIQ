@@ -1,6 +1,6 @@
 {
   "appId": "app.collectoriq",
-  "appName": "Collector IQ",
+  "appName": "Watch Collector",
   "webDir": "dist",
   "server": {},
   "plugins": {

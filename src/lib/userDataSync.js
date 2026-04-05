@@ -5,6 +5,7 @@
 
 import { auth, db } from '../firebase'
 import { clearLocalUserData, LAST_UID_KEY } from './clearLocalUserData'
+import { setCurrentRunId, getCurrentRunId } from './driftStorage'
 import {
   doc,
   getDoc,
@@ -63,6 +64,7 @@ export async function saveUserCollection(uid, watches) {
 
 /**
  * Fetch user's drift readings for a watch from cloud.
+ * @returns {{ items, currentRunId } | null}
  */
 export async function fetchUserReadings(uid, reference) {
   if (!db || !uid || !reference) return null
@@ -71,7 +73,8 @@ export async function fetchUserReadings(uid, reference) {
     const snap = await getDoc(ref)
     const data = snap?.data()
     const items = data?.items
-    return Array.isArray(items) ? items : null
+    const currentRunId = data?.currentRunId ?? 'legacy'
+    return Array.isArray(items) ? { items, currentRunId } : null
   } catch {
     return null
   }
@@ -79,6 +82,7 @@ export async function fetchUserReadings(uid, reference) {
 
 /**
  * Fetch all user's drift readings from cloud.
+ * @returns {{ [ref: string]: { items, currentRunId } }}
  */
 export async function fetchAllUserReadings(uid) {
   if (!db || !uid) return {}
@@ -89,8 +93,11 @@ export async function fetchAllUserReadings(uid) {
     const out = {}
     snap.docs.forEach((d) => {
       const refStr = docIdToRef(d.id)
-      const items = d.data()?.items
-      if (Array.isArray(items)) out[refStr] = items
+      const data = d.data()
+      const items = Array.isArray(data?.items) ? data.items : (Array.isArray(data) ? data : null)
+      if (items) {
+        out[refStr] = { items, currentRunId: data?.currentRunId ?? 'legacy' }
+      }
     })
     return out
   } catch {
@@ -101,7 +108,7 @@ export async function fetchAllUserReadings(uid) {
 /**
  * Save user's drift readings for a watch to cloud.
  */
-export async function saveUserReadings(uid, reference, readings) {
+export async function saveUserReadings(uid, reference, readings, currentRunId) {
   if (!db || !uid || !reference || !Array.isArray(readings)) return false
   try {
     const ref = doc(db, USER_DATA, uid, READINGS, refToDocId(reference))
@@ -109,10 +116,14 @@ export async function saveUserReadings(uid, reference, readings) {
       id: r.id,
       timestamp: r.timestamp instanceof Date ? r.timestamp.toISOString() : r.timestamp,
       driftInSeconds: r.driftInSeconds,
-      position: r.position ?? null,
+      runId: r.runId ?? 'legacy',
+      ...(r.position ? { position: r.position } : {}),
+      ...(r.winding ? { winding: r.winding } : {}),
     }))
+    const runId = currentRunId ?? getCurrentRunId(reference)
     await setDoc(ref, {
       items: serialized,
+      currentRunId: runId,
       updatedAt: serverTimestamp(),
     })
     return true
@@ -152,13 +163,16 @@ export async function syncFromCloud(uid, getLocalCollection, getLocalReadingsFor
     }
   }
 
-  Object.entries(cloudReadings).forEach(([ref, items]) => {
+  Object.entries(cloudReadings).forEach(([ref, data]) => {
+    const items = Array.isArray(data?.items) ? data.items : (Array.isArray(data) ? data : [])
+    const currentRunId = data?.currentRunId ?? 'legacy'
     const parsed = items.map((r) => ({
       ...r,
       timestamp: new Date(r.timestamp),
-      position: r.position ?? null,
+      runId: r.runId ?? 'legacy',
     }))
     setLocalReadings(ref, parsed)
+    setCurrentRunId(ref, currentRunId)
   })
 }
 
@@ -172,7 +186,7 @@ export async function pushCollectionToCloud(watches) {
 }
 
 /**
- * Push local readings for one watch to cloud. Call after add/delete/clear.
+ * Push local readings for one watch to cloud. Call after add/delete/clear/startNewRun/deleteRun.
  */
 export async function pushReadingsToCloud(reference, readings) {
   const uid = auth?.currentUser?.uid

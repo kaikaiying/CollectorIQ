@@ -1,6 +1,6 @@
-# Collector IQ (Web)
+# Watch Collector — Accuracy Tracker (Web)
 
-Watch accuracy tracker — add your watches, measure drift against server time, see how you compare to manufacturer specs.
+Add your watches, measure drift against atomic time, and compare to manufacturer specs — local-first, free.
 
 ## How to see the app in your browser
 
@@ -19,7 +19,7 @@ Watch accuracy tracker — add your watches, measure drift against server time, 
    - **http://localhost:5173**
    - Or the one Vite prints (might be different port)
 
-4. Use the app in the browser: log in (any name), add watches, run drift tests, check Discovery and Settings.
+4. Use the app in the browser: add watches, run drift tests, open Clock/Discovery/Settings.
 
 To stop the server: press `Ctrl+C` in the terminal.
 

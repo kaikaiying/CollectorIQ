@@ -30,7 +30,19 @@ const MODEL_MIN = 2
 const MODEL_MAX = 80
 const REF_MAX = 40
 const CALIBRE_MAX = 30
-const NOTES_MAX = 200
+export const NOTES_MAX = 200
+const SERIAL_MAX = 50
+
+function isPurchaseDateOk(s) {
+  if (!s || typeof s !== 'string') return true
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return false
+  const [y, m, d] = s.split('-').map(Number)
+  const dt = new Date(y, m - 1, d)
+  if (dt.getFullYear() !== y || dt.getMonth() !== m - 1 || dt.getDate() !== d) return false
+  const today = new Date()
+  today.setHours(23, 59, 59, 999)
+  return dt <= today
+}
 
 function trim(s) {
   return typeof s === 'string' ? s.trim() : ''
@@ -47,6 +59,11 @@ export function validateCustomWatch(input) {
   const movementCalibre = trim(input.movementCalibre)
   const category = trim(input.category)
   const notes = trim(input.notes)
+  const serialNumber = trim(input.serialNumber)
+  const purchaseDate = trim(input.purchaseDate)
+
+  if (serialNumber.length > SERIAL_MAX) errors.serialNumber = `Max ${SERIAL_MAX} characters.`
+  if (purchaseDate && !isPurchaseDateOk(purchaseDate)) errors.purchaseDate = 'Use a valid date (not in the future).'
 
   if (!brand) errors.brand = 'Brand is required.'
   else if (brand.length < BRAND_MIN) errors.brand = `At least ${BRAND_MIN} characters.`
@@ -88,6 +105,8 @@ export function validateCustomWatch(input) {
           movementCalibre: movementCalibre || null,
           category: category || null,
           notes: notes || null,
+          serialNumber: serialNumber || null,
+          purchaseDate: purchaseDate || null,
         }
       : null,
   }

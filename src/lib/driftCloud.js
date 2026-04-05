@@ -20,40 +20,8 @@ function refToDocId(ref) {
   return String(ref ?? '').replace(/\//g, '__')
 }
 
-/**
- * Upload one drift reading and update the per-reference aggregate.
- * Uses API for outlier removal and median; falls back to direct Firestore if API unavailable.
- * @param {{ reference: string, brand: string, model: string, specMin?: number, specMax?: number }} watch
- * @param {number} driftInSeconds
- * @param {Date} timestamp
- */
-export async function uploadDriftReading(watch, driftInSeconds, timestamp) {
-  if (!db || !auth?.currentUser) return
-  const { reference, brand, model, specMin = -999, specMax = 999 } = watch
-  const ts = timestamp instanceof Date ? timestamp : new Date(timestamp)
-
-  try {
-    const token = await auth.currentUser.getIdToken()
-    const base = getApiBase()
-    const res = await fetch(`${base}/api/upload-reading`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify({
-        reference,
-        brand,
-        model,
-        specMin,
-        specMax,
-        driftInSeconds,
-        timestamp: ts.toISOString(),
-      }),
-    })
-    if (res.ok) return
-  } catch {
-    /* API unavailable, fall through to fallback */
-  }
-
-  /* Fallback: direct Firestore write (no outlier removal) */
+async function uploadDriftReadingViaFirestore(reference, brand, model, specMin, specMax, driftInSeconds, ts) {
+  if (!db) return
   const inSpec = driftInSeconds >= specMin && driftInSeconds <= specMax
   await runTransaction(db, async (tx) => {
     const readingRef = doc(collection(db, READINGS))
@@ -86,6 +54,44 @@ export async function uploadDriftReading(watch, driftInSeconds, timestamp) {
       updatedAt: serverTimestamp(),
     })
   })
+}
+
+/**
+ * Upload one drift reading and update the per-reference aggregate.
+ * Uses API for outlier removal and median when signed in; otherwise Firestore only (same as API fallback).
+ * @param {{ reference: string, brand: string, model: string, specMin?: number, specMax?: number }} watch
+ * @param {number} driftInSeconds
+ * @param {Date} timestamp
+ */
+export async function uploadDriftReading(watch, driftInSeconds, timestamp) {
+  if (!db) return
+  const { reference, brand, model, specMin = -999, specMax = 999 } = watch
+  const ts = timestamp instanceof Date ? timestamp : new Date(timestamp)
+
+  if (auth?.currentUser) {
+    try {
+      const token = await auth.currentUser.getIdToken()
+      const base = getApiBase()
+      const res = await fetch(`${base}/api/upload-reading`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          reference,
+          brand,
+          model,
+          specMin,
+          specMax,
+          driftInSeconds,
+          timestamp: ts.toISOString(),
+        }),
+      })
+      if (res.ok) return
+    } catch {
+      /* API unavailable, fall through to Firestore */
+    }
+  }
+
+  await uploadDriftReadingViaFirestore(reference, brand, model, specMin, specMax, driftInSeconds, ts)
 }
 
 /**

@@ -5,8 +5,12 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:fresh": "sh -c 'lsof -ti:5173 | xargs kill -9 2>/dev/null; exec vite'",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "screenshots:appstore": "node scripts/app-store-screenshots.mjs",
+    "screenshots:appstore:save": "node scripts/app-store-screenshots.mjs --save",
+    "go": "npm run dev:fresh"
   },
   "dependencies": {
     "@capacitor-firebase/authentication": "^8.1.0",
@@ -15,6 +19,7 @@
     "@capacitor/keyboard": "^8.0.1",
     "@capgo/native-purchases": "^8.1.0",
     "@vercel/analytics": "^1.6.1",
+    "d3-geo": "^3.1.1",
     "firebase": "^12.9.0",
     "firebase-admin": "^12.0.0",
     "react": "^18.2.0",
@@ -24,11 +29,14 @@
     "react-zoom-pan-pinch": "^3.7.0",
     "stripe": "^17.0.0",
     "swiper": "^12.1.2",
+    "topojson-client": "^3.1.0",
+    "world-atlas": "^2.0.2",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@capacitor/cli": "^8.1.0",
     "@vitejs/plugin-react": "^4.2.1",
+    "playwright": "^1.49.0",
     "vite": "^5.1.0"
   }
 }

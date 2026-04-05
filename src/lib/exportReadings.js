@@ -5,12 +5,9 @@
 
 import * as XLSX from 'xlsx'
 import { getCollection } from '../App'
-import { getDriftReadings, STORAGE_POSITIONS } from './driftStorage'
-
-function getPositionLabel(id) {
-  if (!id) return ''
-  return STORAGE_POSITIONS.find((p) => p.id === id)?.label ?? id
-}
+import { getDriftReadings } from './driftStorage'
+import { getWearEntries } from './wearLogStorage'
+import { labelDriftPosition, labelDriftWinding } from './driftReadingContext'
 
 function stdDev(values) {
   if (values.length < 2) return null
@@ -31,7 +28,7 @@ function formatTime(d) {
  * Build rows for Full report: each reading as a row
  */
 function buildFullReport(watches) {
-  const rows = [['Brand', 'Model', 'Reference', 'Date', 'Time', 'Drift (s)', 'Position', 'Spec Min', 'Spec Max', 'In Spec']]
+  const rows = [['Brand', 'Model', 'Reference', 'Date', 'Time', 'Drift (s)', 'Position', 'Winding', 'Spec Min', 'Spec Max', 'In Spec']]
   for (const w of watches) {
     const readings = getDriftReadings(w.reference).sort((a, b) => a.timestamp - b.timestamp)
     const specMin = w.specMin ?? ''
@@ -47,7 +44,8 @@ function buildFullReport(watches) {
         formatDate(r.timestamp),
         formatTime(r.timestamp),
         r.driftInSeconds,
-        getPositionLabel(r.position),
+        labelDriftPosition(r.position),
+        labelDriftWinding(r.winding),
         specMin,
         specMax,
         inSpec,
@@ -100,7 +98,7 @@ function buildSummaryReport(watches) {
  * Build rows for Minimal report: Date, Time, Model, Drift
  */
 function buildMinimalReport(watches) {
-  const rows = [['Date', 'Time', 'Brand', 'Model', 'Drift (s)', 'Position']]
+  const rows = [['Date', 'Time', 'Brand', 'Model', 'Drift (s)']]
   const all = []
   for (const w of watches) {
     const readings = getDriftReadings(w.reference)
@@ -114,8 +112,50 @@ function buildMinimalReport(watches) {
       r.watch.brand,
       r.watch.model,
       r.driftInSeconds,
-      getPositionLabel(r.position),
     ])
+  }
+  return rows
+}
+
+function sortWearEntriesDesc(a, b) {
+  if (a.date !== b.date) return b.date.localeCompare(a.date)
+  return b.createdAt - a.createdAt
+}
+
+/**
+ * Wear rows for watches currently in the collection only (one combined list).
+ */
+function buildWearDetailRowsForCollection(watches) {
+  const rows = [['Brand', 'Model', 'Reference', 'Serial', 'Purchase date', 'Wear date', 'Note']]
+  if (watches.length === 0) return rows
+  const byRef = new Map(watches.map((w) => [w.reference, w]))
+  const refs = new Set(watches.map((w) => w.reference))
+  const entries = getWearEntries().filter((e) => refs.has(e.reference)).sort(sortWearEntriesDesc)
+  for (const e of entries) {
+    const w = byRef.get(e.reference)
+    if (!w) continue
+    rows.push([
+      w.brand,
+      w.model,
+      e.reference,
+      w.serialNumber ?? '',
+      w.purchaseDate ?? '',
+      e.date,
+      e.note ?? '',
+    ])
+  }
+  return rows
+}
+
+/** One row per collection watch with how many wear rows appear in the export. */
+function buildWearOverviewRows(watches, collectionEntries) {
+  const rows = [['Brand', 'Model', 'Reference', 'Wear rows in export']]
+  const countByRef = new Map(watches.map((w) => [w.reference, 0]))
+  for (const e of collectionEntries) {
+    countByRef.set(e.reference, (countByRef.get(e.reference) ?? 0) + 1)
+  }
+  for (const w of watches) {
+    rows.push([w.brand, w.model, w.reference, countByRef.get(w.reference) ?? 0])
   }
   return rows
 }
@@ -124,24 +164,40 @@ const REPORT_BUILDERS = {
   full: { build: buildFullReport, name: 'Full (all readings)', sheet: 'Readings' },
   summary: { build: buildSummaryReport, name: 'Summary (by watch)', sheet: 'Summary' },
   minimal: { build: buildMinimalReport, name: 'Minimal (date, time, model, drift)', sheet: 'Readings' },
+  wear: { build: buildWearDetailRowsForCollection, name: 'Wear log (whole collection)', sheet: 'Wear log' },
 }
 
 /**
  * Export to Excel
- * @param {('full'|'summary'|'minimal')} reportType
+ * @param {('full'|'summary'|'minimal'|'wear')} reportType
  */
 export function exportToExcel(reportType) {
+  const watches = getCollection()
+
+  if (reportType === 'wear') {
+    if (watches.length === 0) return false
+    const refs = new Set(watches.map((w) => w.reference))
+    const collectionEntries = getWearEntries().filter((e) => refs.has(e.reference))
+    const detail = buildWearDetailRowsForCollection(watches)
+    const overview = buildWearOverviewRows(watches, collectionEntries)
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(detail), 'Wear log')
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(overview), 'By watch')
+    const filename = `WatchCollector_wear_${formatDate(new Date())}.xlsx`
+    XLSX.writeFile(wb, filename)
+    return true
+  }
+
   const config = REPORT_BUILDERS[reportType]
   if (!config) return
-  const watches = getCollection()
   const rows = config.build(watches)
   if (rows.length <= 1) {
-    return false // no data
+    return false
   }
   const wb = XLSX.utils.book_new()
   const ws = XLSX.utils.aoa_to_sheet(rows)
   XLSX.utils.book_append_sheet(wb, ws, config.sheet)
-  const filename = `CollectorIQ_${reportType}_${formatDate(new Date())}.xlsx`
+  const filename = `WatchCollector_${reportType}_${formatDate(new Date())}.xlsx`
   XLSX.writeFile(wb, filename)
   return true
 }
